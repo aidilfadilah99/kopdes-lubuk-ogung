@@ -10,7 +10,7 @@ import {
   Eye,
   EyeOff,
   Shield,
-  Info,
+  AlertCircle,
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
-                  <Info className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                   <p className="text-red-700 text-sm">{error}</p>
                 </div>
               )}
@@ -161,39 +161,14 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            {/* Demo accounts */}
-            <div className="mt-6">
-              <p className="text-xs text-gray-500 text-center mb-3 flex items-center gap-1 justify-center">
-                <Info className="w-3 h-3" />
-                Akun demo — klik untuk mengisi otomatis
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {demoAccounts.map((acc) => (
-                  <button
-                    key={acc.label}
-                    type="button"
-                    onClick={() => {
-                      setUsername(acc.username);
-                      setPassword(acc.password);
-                      setError("");
-                    }}
-                    className={`border rounded-xl px-3 py-2 text-xs font-medium text-left transition-all hover:shadow-sm ${acc.color}`}
-                  >
-                    <div className="font-semibold">{acc.label}</div>
-                    <div className="opacity-75 mt-0.5">{acc.username}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Footer */}
           <div className="bg-gray-50 px-8 py-4 border-t border-gray-100 text-center">
             <p className="text-xs text-gray-500">
-              Belum login?{" "}
+              Belum punya akun? Hubungi pengurus koperasi untuk mendapatkan akses.{" "}
               <a href="/transparansi" className="text-red-600 hover:underline font-medium">
-                Lihat Portal Transparansi Publik
+                Lihat Transparansi Publik
               </a>
             </p>
           </div>

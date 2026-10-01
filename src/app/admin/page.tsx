@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RejectModal } from "@/components/RejectModal";
 import { Loan, Member } from "@/types";
 import {
   formatDateIndo,
@@ -35,6 +36,7 @@ function AdminDashboardContent() {
   const [selectedDusun, setSelectedDusun] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [notification, setNotification] = useState<string | null>(null);
+  const [rejectLoanTarget, setRejectLoanTarget] = useState<Loan | null>(null);
 
   // New Member Modal
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -166,10 +168,19 @@ function AdminDashboardContent() {
 
   const handleAdminRejectLoan = (loan: Loan) => {
     if (!currentUser) return;
-    const reason = prompt("Masukkan alasan penolakan:", "Syarat administrasi belum lengkap");
-    if (reason === null) return;
-    DataStore.updateLoanStatus(loan.id, "REJECTED", currentUser.name, reason);
-    notify(`Pinjaman ${loan.memberName} telah ditolak.`);
+    setRejectLoanTarget(loan);
+  };
+
+  const doAdminRejectLoan = (reason: string) => {
+    if (!rejectLoanTarget || !currentUser) return;
+    DataStore.updateLoanStatus(rejectLoanTarget.id, "REJECTED", currentUser.name, reason);
+    DataStore.addAuditLog(
+      "ADMIN_REJECT_LOAN",
+      `Admin menolak pinjaman ${formatRupiah(rejectLoanTarget.amount)} dari ${rejectLoanTarget.memberName}. Alasan: ${reason}`,
+      { id: currentUser.id, name: currentUser.name, role: currentUser.role }
+    );
+    notify(`Pinjaman ${rejectLoanTarget.memberName} telah ditolak.`);
+    setRejectLoanTarget(null);
     refreshData();
   };
 
@@ -621,6 +632,17 @@ function AdminDashboardContent() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Reject Loan Modal */}
+      {rejectLoanTarget && (
+        <RejectModal
+          title="Tolak Pengajuan Pinjaman"
+          description={`Anda akan menolak pengajuan pinjaman ${rejectLoanTarget.memberName}. Tindakan ini dicatat di sistem dan anggota perlu mengajukan ulang.`}
+          defaultReason="Syarat administrasi belum lengkap"
+          onConfirm={doAdminRejectLoan}
+          onClose={() => setRejectLoanTarget(null)}
+        />
       )}
     </div>
   );

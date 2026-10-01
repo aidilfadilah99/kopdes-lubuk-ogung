@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { EditUserModal } from "@/components/EditUserModal";
+import { RejectModal } from "@/components/RejectModal";
 import {
   AuditLog,
   CooperativeConfig,
@@ -42,6 +44,10 @@ function MasterDashboardContent() {
   const [config, setConfig] = useState<CooperativeConfig | null>(null);
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Modal state
+  const [editUserTarget, setEditUserTarget] = useState<User | null>(null);
+  const [rejectLoanTarget, setRejectLoanTarget] = useState<Loan | null>(null);
 
   // New User Form State
   const [newUserModalOpen, setNewUserModalOpen] = useState(false);
@@ -89,16 +95,19 @@ function MasterDashboardContent() {
   };
 
   const handleRejectLoan = (loan: Loan) => {
-    const reason = prompt("Masukkan alasan penolakan pinjaman:", "Dokumen agunan belum memadai");
-    if (reason === null) return;
+    setRejectLoanTarget(loan);
+  };
 
-    DataStore.updateLoanStatus(loan.id, "REJECTED", currentUser.name, reason);
+  const doRejectLoan = (reason: string) => {
+    if (!rejectLoanTarget) return;
+    DataStore.updateLoanStatus(rejectLoanTarget.id, "REJECTED", currentUser.name, reason);
     DataStore.addAuditLog(
       "REJECT_PINJAMAN_MASTER",
-      `Master menolak pinjaman ${formatRupiah(loan.amount)} untuk ${loan.memberName}. Alasan: ${reason}`,
+      `Master menolak pinjaman ${formatRupiah(rejectLoanTarget.amount)} untuk ${rejectLoanTarget.memberName}. Alasan: ${reason}`,
       { id: currentUser.id, name: currentUser.name, role: currentUser.role }
     );
-    notify(`Pinjaman ${loan.memberName} telah ditolak.`);
+    notify(`Pinjaman ${rejectLoanTarget.memberName} telah ditolak.`);
+    setRejectLoanTarget(null);
     refreshData();
   };
 
@@ -418,22 +427,12 @@ function MasterDashboardContent() {
                           {formatDateIndo(u.createdAt)}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {u.id === currentUser.id ? (
-                            <span className="text-[11px] text-slate-400 italic">Akun Anda</span>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                if (confirm(`Yakin ingin menghapus akses ${u.name}?`)) {
-                                  DataStore.deleteUser(u.id);
-                                  notify(`Akses pengguna ${u.name} berhasil dihapus.`);
-                                  refreshData();
-                                }
-                              }}
-                              className="text-rose-600 hover:text-rose-800 font-semibold"
-                            >
-                              Hapus Akses
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setEditUserTarget(u)}
+                            className="text-slate-600 hover:text-slate-900 font-semibold text-sm px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-400 transition-colors"
+                          >
+                            Edit
+                          </button>
                         </td>
                       </tr>
                     );
@@ -721,6 +720,27 @@ function MasterDashboardContent() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editUserTarget && (
+        <EditUserModal
+          user={editUserTarget}
+          currentMasterId={currentUser.id}
+          onClose={() => setEditUserTarget(null)}
+          onSaved={() => { refreshData(); notify(`Data pengguna ${editUserTarget.name} berhasil diperbarui.`); }}
+        />
+      )}
+
+      {/* Reject Loan Modal */}
+      {rejectLoanTarget && (
+        <RejectModal
+          title="Tolak Pengajuan Pinjaman"
+          description={`Anda akan menolak pengajuan pinjaman ${formatRupiah(rejectLoanTarget.amount)} dari ${rejectLoanTarget.memberName}. Tindakan ini akan dicatat di audit log dan tidak dapat dibatalkan.`}
+          defaultReason="Dokumen agunan belum memadai"
+          onConfirm={doRejectLoan}
+          onClose={() => setRejectLoanTarget(null)}
+        />
       )}
     </div>
   );

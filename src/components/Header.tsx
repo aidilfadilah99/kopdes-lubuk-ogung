@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
 import { CooperativeConfig } from "@/types";
+import { ProfileModal } from "@/components/ProfileModal";
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +18,7 @@ import {
   X,
   ChevronDown,
   Building2,
+  UserCog,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -38,6 +40,7 @@ export default function Header() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [config, setConfig] = useState<CooperativeConfig | null>(null);
 
   useEffect(() => {
@@ -152,6 +155,14 @@ export default function Header() {
                         </p>
                       </div>
                       <button
+                        onClick={() => { setProfileOpen(true); setUserMenuOpen(false); }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                      >
+                        <UserCog className="w-4 h-4" />
+                        Edit Profil & Password
+                      </button>
+                      <div className="border-t border-gray-100" />
+                      <button
                         onClick={handleLogout}
                         className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
                       >
@@ -217,6 +228,13 @@ export default function Header() {
           })}
           <div className="pt-2 border-t border-gray-100 mt-2">
             <button
+              onClick={() => { setProfileOpen(true); setMobileOpen(false); }}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 w-full transition-colors"
+            >
+              <UserCog className="w-4 h-4" />
+              Edit Profil & Password
+            </button>
+            <button
               onClick={handleLogout}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 w-full transition-colors"
             >
@@ -225,6 +243,11 @@ export default function Header() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Profile Modal */}
+      {profileOpen && currentUser && (
+        <ProfileModal onClose={() => setProfileOpen(false)} />
       )}
     </header>
   );
