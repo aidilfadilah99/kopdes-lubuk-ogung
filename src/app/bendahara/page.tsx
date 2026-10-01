@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   Loan,
   LoanInstallment,
@@ -29,8 +30,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-export default function BendaharaDashboard() {
-  const { currentUser, quickLogin } = useAuth();
+function BendaharaDashboardContent() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "mutasi">("setoran");
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -76,26 +77,8 @@ export default function BendaharaDashboard() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  if (!currentUser || (currentUser.role !== "BENDAHARA" && currentUser.role !== "MASTER")) {
-    return (
-      <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-2xl shadow-xl border border-emerald-200 text-center space-y-4">
-        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-          <Wallet className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Akses Terbatas: Role BENDAHARA Diperlukan</h2>
-        <p className="text-sm text-slate-600">
-          Halaman ini khusus untuk Petugas Keuangan dan Bendahara Simpan Pinjam. Akun Anda saat ini adalah{" "}
-          <span className="font-bold">{currentUser?.name || "Belum Login"}</span> ({currentUser?.role || "Tamu"}).
-        </p>
-        <button
-          onClick={() => quickLogin("BENDAHARA")}
-          className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-md transition-colors"
-        >
-          Beralih ke Akun Bendahara (Demo 1-Klik)
-        </button>
-      </div>
-    );
-  }
+  // ProtectedRoute ensures currentUser exists, but TS needs this explicit guard
+  if (!currentUser) return null;
 
   // Handle Submit Setoran
   const handleSubmitDeposit = (e: React.FormEvent) => {
@@ -658,5 +641,13 @@ export default function BendaharaDashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BendaharaDashboard() {
+  return (
+    <ProtectedRoute allowedRoles={["BENDAHARA"]}>
+      <BendaharaDashboardContent />
+    </ProtectedRoute>
   );
 }

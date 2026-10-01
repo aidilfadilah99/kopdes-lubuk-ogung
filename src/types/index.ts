@@ -3,6 +3,7 @@ export type UserRole = 'MASTER' | 'ADMIN' | 'BENDAHARA' | 'ANGGOTA';
 export interface User {
   id: string;
   username: string;
+  password: string;
   name: string;
   role: UserRole;
   email?: string;
@@ -11,6 +12,7 @@ export interface User {
   avatarUrl?: string;
   createdAt: string;
   memberId?: string; // Link to Member if role === 'ANGGOTA'
+  isActive: boolean;
 }
 
 export interface Member {

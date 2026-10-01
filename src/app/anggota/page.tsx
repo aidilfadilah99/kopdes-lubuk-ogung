@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   CooperativeConfig,
   Loan,
@@ -28,8 +29,8 @@ import {
   FileText,
 } from "lucide-react";
 
-export default function AnggotaPortal() {
-  const { currentUser, quickLogin } = useAuth();
+function AnggotaPortalContent() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<"tabungan" | "pinjaman" | "simulasi">("tabungan");
 
   const [member, setMember] = useState<Member | null>(null);
@@ -48,13 +49,12 @@ export default function AnggotaPortal() {
   const refreshData = () => {
     if (!currentUser) return;
     const members = DataStore.getMembers();
-    // Match member by memberId or name or nik
+    // Match member by memberId first, then by NIK
     const foundMember =
       members.find((m) => m.id === currentUser.memberId) ||
-      members.find((m) => m.nik === currentUser.nik) ||
-      members[0]; // fallback demo
+      members.find((m) => currentUser.nik && m.nik === currentUser.nik);
 
-    setMember(foundMember);
+    setMember(foundMember || null);
 
     if (foundMember) {
       const allSavings = DataStore.getSavings();
@@ -79,23 +79,6 @@ export default function AnggotaPortal() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  if (!currentUser) {
-    return (
-      <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-2xl shadow-xl border border-amber-200 text-center space-y-4">
-        <h2 className="text-2xl font-bold text-slate-900">Portal Anggota Warga Lubuk Ogung</h2>
-        <p className="text-sm text-slate-600">
-          Silakan masuk untuk melihat data tabungan simpanan dan pinjaman mandiri Anda.
-        </p>
-        <button
-          onClick={() => quickLogin("ANGGOTA")}
-          className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md transition-colors"
-        >
-          Masuk sebagai Anggota Warga (Hassan - Petani Sawit)
-        </button>
-      </div>
-    );
-  }
-
   // Calculate monthly installment simulation
   const interestRate = config?.defaultLoanInterestRate || 1.0;
   const principalMonthly = applyTenor > 0 ? Math.round(applyAmount / applyTenor) : 0;
@@ -105,7 +88,7 @@ export default function AnggotaPortal() {
   // Handle Submit Loan
   const handleApplyLoan = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!member) return;
+    if (!member || !currentUser) return;
     if (applyAmount < 500000) {
       alert("Pengajuan pinjaman minimal Rp 500.000");
       return;
@@ -154,6 +137,9 @@ export default function AnggotaPortal() {
 
   // Estimated personal SHU (proportional calculation demo)
   const estimatedShuMember = Math.round(totalSimpanan * 0.08);
+
+  // ProtectedRoute guarantees currentUser is non-null here, but TS still needs this
+  if (!currentUser) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -567,5 +553,13 @@ export default function AnggotaPortal() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AnggotaPortal() {
+  return (
+    <ProtectedRoute allowedRoles={["ANGGOTA"]}>
+      <AnggotaPortalContent />
+    </ProtectedRoute>
   );
 }

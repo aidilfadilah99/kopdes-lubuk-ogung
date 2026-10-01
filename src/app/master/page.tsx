@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AuditLog,
   CooperativeConfig,
@@ -31,8 +32,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-export default function MasterDashboard() {
-  const { currentUser, quickLogin } = useAuth();
+function MasterDashboardContent() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<"approval" | "users" | "config" | "logs">("approval");
   
   // Data state
@@ -46,6 +47,7 @@ export default function MasterDashboard() {
   const [newUserModalOpen, setNewUserModalOpen] = useState(false);
   const [newUserData, setNewUserData] = useState({
     username: "",
+    password: "kopdes2026",
     name: "",
     role: "ADMIN" as UserRole,
     email: "",
@@ -64,35 +66,15 @@ export default function MasterDashboard() {
     setLogs(DataStore.getAuditLogs());
   };
 
-  useEffect(() => {
-    refreshData();
-  }, []);
+  useEffect(() => { refreshData(); }, []);
 
   const notify = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
   };
 
-  if (!currentUser || currentUser.role !== "MASTER") {
-    return (
-      <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-2xl shadow-xl border border-red-200 text-center space-y-4">
-        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
-          <AlertTriangle className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Akses Terbatas: Role MASTER Diperlukan</h2>
-        <p className="text-sm text-slate-600">
-          Halaman ini khusus untuk Ketua Dewan Pengawas / Kepala Desa (Master). Akun aktif Anda saat ini
-          adalah <span className="font-bold">{currentUser?.name || "Belum Login"}</span> ({currentUser?.role || "Tamu"}).
-        </p>
-        <button
-          onClick={() => quickLogin("MASTER")}
-          className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-md transition-colors"
-        >
-          Beralih ke Akun Master (Demo 1-Klik)
-        </button>
-      </div>
-    );
-  }
+  // ProtectedRoute ensures currentUser exists, but TS needs this explicit guard
+  if (!currentUser) return null;
 
   // Handle Loan Approval
   const handleApproveLoan = (loan: Loan) => {
@@ -123,18 +105,26 @@ export default function MasterDashboard() {
   // Handle Create User
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUserData.username || !newUserData.name) {
-      alert("Harap isi username dan nama lengkap.");
+    if (!newUserData.username || !newUserData.name || !newUserData.password) {
+      alert("Harap isi username, password, dan nama lengkap.");
+      return;
+    }
+
+    const existingUsers = DataStore.getUsers();
+    if (existingUsers.find(u => u.username.toLowerCase() === newUserData.username.toLowerCase())) {
+      alert("Username sudah digunakan. Pilih username lain.");
       return;
     }
 
     const newUser: User = {
       id: `usr-${Date.now()}`,
       username: newUserData.username.toLowerCase().trim(),
+      password: newUserData.password,
       name: newUserData.name.trim(),
       role: newUserData.role,
       email: newUserData.email,
       phone: newUserData.phone,
+      isActive: true,
       createdAt: new Date().toISOString(),
     };
 
@@ -147,7 +137,7 @@ export default function MasterDashboard() {
 
     notify(`Pengguna baru ${newUser.name} (${newUser.role}) berhasil ditambahkan!`);
     setNewUserModalOpen(false);
-    setNewUserData({ username: "", name: "", role: "ADMIN", email: "", phone: "" });
+    setNewUserData({ username: "", password: "kopdes2026", name: "", role: "ADMIN", email: "", phone: "" });
     refreshData();
   };
 
@@ -662,6 +652,21 @@ export default function MasterDashboard() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Password Awal
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="kopdes2026"
+                  value={newUserData.password}
+                  onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none font-mono"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">Pengguna dapat menghubungi Master untuk reset password.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Role / Tingkat Hak Akses
                 </label>
                 <select
@@ -718,5 +723,13 @@ export default function MasterDashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MasterDashboard() {
+  return (
+    <ProtectedRoute allowedRoles={["MASTER"]}>
+      <MasterDashboardContent />
+    </ProtectedRoute>
   );
 }

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
-import { Loan, Member, UserRole } from "@/types";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Loan, Member } from "@/types";
 import {
   formatDateIndo,
   formatRupiah,
@@ -25,8 +26,8 @@ import {
   MapPin,
 } from "lucide-react";
 
-export default function AdminDashboard() {
-  const { currentUser, quickLogin } = useAuth();
+function AdminDashboardContent() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<"members" | "loans">("members");
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -53,39 +54,17 @@ export default function AdminDashboard() {
     setLoans(DataStore.getLoans());
   };
 
-  useEffect(() => {
-    refreshData();
-  }, []);
+  useEffect(() => { refreshData(); }, []);
 
   const notify = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
   };
 
-  if (!currentUser || (currentUser.role !== "ADMIN" && currentUser.role !== "MASTER")) {
-    return (
-      <div className="max-w-2xl mx-auto my-16 p-8 bg-white rounded-2xl shadow-xl border border-blue-200 text-center space-y-4">
-        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto">
-          <UserCheck className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Akses Terbatas: Role ADMIN Diperlukan</h2>
-        <p className="text-sm text-slate-600">
-          Halaman ini khusus untuk Pengurus Administrasi Koperasi Desa. Akun Anda saat ini adalah{" "}
-          <span className="font-bold">{currentUser?.name || "Belum Login"}</span> ({currentUser?.role || "Tamu"}).
-        </p>
-        <button
-          onClick={() => quickLogin("ADMIN")}
-          className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md transition-colors"
-        >
-          Beralih ke Akun Admin (Demo 1-Klik)
-        </button>
-      </div>
-    );
-  }
-
   // Handle Add Member
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
     if (!newMember.name || !newMember.nik) {
       alert("Harap isi Nama dan NIK warga.");
       return;
@@ -120,6 +99,8 @@ export default function AdminDashboard() {
       nik: newMember.nik,
       phone: newMember.phone,
       memberId: memberId,
+      password: newMember.nik.slice(-6), // Default password = 6 digit terakhir NIK
+      isActive: true,
       createdAt: new Date().toISOString(),
     });
 
@@ -146,6 +127,7 @@ export default function AdminDashboard() {
 
   // Verify pending member
   const handleVerifyMember = (m: Member) => {
+    if (!currentUser) return;
     m.status = "AKTIF";
     DataStore.saveMember(m);
     DataStore.addAuditLog(
@@ -159,6 +141,7 @@ export default function AdminDashboard() {
 
   // Admin forwards to Master or Approves small loans
   const handleForwardToMaster = (loan: Loan) => {
+    if (!currentUser) return;
     DataStore.updateLoanStatus(loan.id, "PENDING_MASTER", currentUser.name);
     DataStore.addAuditLog(
       "FORWARD_LOAN_TO_MASTER",
@@ -170,6 +153,7 @@ export default function AdminDashboard() {
   };
 
   const handleAdminDirectApprove = (loan: Loan) => {
+    if (!currentUser) return;
     DataStore.updateLoanStatus(loan.id, "APPROVED", currentUser.name);
     DataStore.addAuditLog(
       "ADMIN_APPROVE_LOAN",
@@ -181,6 +165,7 @@ export default function AdminDashboard() {
   };
 
   const handleAdminRejectLoan = (loan: Loan) => {
+    if (!currentUser) return;
     const reason = prompt("Masukkan alasan penolakan:", "Syarat administrasi belum lengkap");
     if (reason === null) return;
     DataStore.updateLoanStatus(loan.id, "REJECTED", currentUser.name, reason);
@@ -638,5 +623,13 @@ export default function AdminDashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <ProtectedRoute allowedRoles={["ADMIN"]}>
+      <AdminDashboardContent />
+    </ProtectedRoute>
   );
 }
