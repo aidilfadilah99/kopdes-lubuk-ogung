@@ -115,13 +115,13 @@ function MasterDashboardContent() {
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserData.username || !newUserData.name || !newUserData.password) {
-      alert("Harap isi username, password, dan nama lengkap.");
+      notify("⚠️ Harap lengkapi username, password awal, dan nama lengkap.");
       return;
     }
 
     const existingUsers = DataStore.getUsers();
     if (existingUsers.find(u => u.username.toLowerCase() === newUserData.username.toLowerCase())) {
-      alert("Username sudah digunakan. Pilih username lain.");
+      notify("⚠️ Username tersebut sudah digunakan. Silakan pilih username lain.");
       return;
     }
 

@@ -91,11 +91,11 @@ function AnggotaPortalContent() {
     e.preventDefault();
     if (!member || !currentUser) return;
     if (applyAmount < 500000) {
-      alert("Pengajuan pinjaman minimal Rp 500.000");
+      notify("⚠️ Pengajuan pinjaman minimal Rp 500.000.");
       return;
     }
     if (!applyPurpose.trim()) {
-      alert("Harap sebutkan tujuan peminjaman modal.");
+      notify("⚠️ Harap sebutkan tujuan peminjaman modal usaha.");
       return;
     }
 

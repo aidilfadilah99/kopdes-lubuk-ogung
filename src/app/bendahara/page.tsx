@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ConfirmModal, ConfirmDetailItem } from "@/components/ConfirmModal";
 import {
   Loan,
   LoanInstallment,
@@ -58,6 +59,17 @@ function BendaharaDashboardContent() {
     officer: string;
   } | null>(null);
 
+  // Modern Confirmation Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    description?: string;
+    details?: ConfirmDetailItem[];
+    confirmText?: string;
+    theme?: "emerald" | "blue" | "amber" | "rose" | "indigo";
+    icon?: "check" | "alert" | "dollar" | "wallet" | "help";
+    onConfirm: () => void;
+  } | null>(null);
+
   const refreshData = () => {
     setMembers(DataStore.getMembers());
     setSavings(DataStore.getSavings());
@@ -85,11 +97,11 @@ function BendaharaDashboardContent() {
     e.preventDefault();
     const member = members.find((m) => m.id === selectedMemberId);
     if (!member) {
-      alert("Pilih anggota yang menyetor.");
+      notify("⚠️ Harap pilih anggota yang menyetor.");
       return;
     }
     if (depositAmount <= 0) {
-      alert("Nominal setoran tidak valid.");
+      notify("⚠️ Nominal setoran tidak valid.");
       return;
     }
 
@@ -129,12 +141,27 @@ function BendaharaDashboardContent() {
     refreshData();
   };
 
-  // Handle Disburse Loan (Pencairan)
+  // Handle Disburse Loan (Pencairan) with Modern Modal
   const handleDisburseLoan = (loan: Loan) => {
-    if (!confirm(`Konfirmasi pencairan dana pinjaman sebesar ${formatRupiah(loan.amount)} kepada ${loan.memberName}?`)) {
-      return;
-    }
+    setConfirmConfig({
+      title: "Konfirmasi Pencairan Pinjaman",
+      description: "Pastikan berkas akad pinjaman telah ditandatangani dan fisik dana telah siap sebelum pencairan.",
+      details: [
+        { label: "Nomor Pinjaman", value: loan.id },
+        { label: "Nama Peminjam", value: loan.memberName },
+        { label: "NIK", value: loan.memberNik },
+        { label: "Plafon Pinjaman", value: formatRupiah(loan.amount), highlight: true },
+        { label: "Jangka Waktu", value: `${loan.tenorMonths} Bulan` },
+        { label: "Cicilan per Bulan", value: formatRupiah(loan.monthlyInstallment) },
+      ],
+      confirmText: "Ya, Cairkan Dana Sekarang",
+      theme: "emerald",
+      icon: "wallet",
+      onConfirm: () => doDisburseLoan(loan),
+    });
+  };
 
+  const doDisburseLoan = (loan: Loan) => {
     DataStore.updateLoanStatus(loan.id, "DISBURSED", currentUser.name);
     DataStore.addAuditLog(
       "PENCAIRAN_PINJAMAN",
@@ -157,12 +184,26 @@ function BendaharaDashboardContent() {
     refreshData();
   };
 
-  // Handle Pay Installment
+  // Handle Pay Installment with Modern Modal
   const handlePayInstallment = (ins: LoanInstallment) => {
-    if (!confirm(`Terima pembayaran angsuran ke-${ins.installmentNo} sebesar ${formatRupiah(ins.amount)} dari ${ins.memberName}?`)) {
-      return;
-    }
+    setConfirmConfig({
+      title: "Terima Pembayaran Angsuran",
+      description: `Konfirmasi penerimaan pembayaran cicilan pinjaman dari anggota warga secara resmi:`,
+      details: [
+        { label: "Nama Anggota", value: ins.memberName },
+        { label: "Cicilan", value: `Angsuran Ke-${ins.installmentNo}` },
+        { label: "ID Pinjaman", value: ins.loanId },
+        { label: "Nominal Pembayaran", value: formatRupiah(ins.amount), highlight: true },
+        { label: "Jatuh Tempo", value: formatDateIndo(ins.dueDate) },
+      ],
+      confirmText: "Ya, Terima & Cetak Kwitansi",
+      theme: "emerald",
+      icon: "dollar",
+      onConfirm: () => doPayInstallment(ins),
+    });
+  };
 
+  const doPayInstallment = (ins: LoanInstallment) => {
     DataStore.payInstallment(ins.id, currentUser.name);
     DataStore.addAuditLog(
       "TERIMA_ANGSURAN",
@@ -181,7 +222,7 @@ function BendaharaDashboardContent() {
       officer: currentUser.name,
     });
 
-    notify(`Angsuran ke-${ins.installmentNo} dari ${ins.memberName} berhasil dibayarkan!`);
+    notify(`Angsuran ke-${ins.installmentNo} (${formatRupiah(ins.amount)}) dari ${ins.memberName} berhasil dibayarkan!`);
     refreshData();
   };
 
@@ -639,6 +680,20 @@ function BendaharaDashboardContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modern Confirmation Modal */}
+      {confirmConfig && (
+        <ConfirmModal
+          title={confirmConfig.title}
+          description={confirmConfig.description}
+          details={confirmConfig.details}
+          confirmText={confirmConfig.confirmText}
+          theme={confirmConfig.theme || "emerald"}
+          icon={confirmConfig.icon || "check"}
+          onConfirm={confirmConfig.onConfirm}
+          onClose={() => setConfirmConfig(null)}
+        />
       )}
     </div>
   );

@@ -68,7 +68,7 @@ function AdminDashboardContent() {
     e.preventDefault();
     if (!currentUser) return;
     if (!newMember.name || !newMember.nik) {
-      alert("Harap isi Nama dan NIK warga.");
+      notify("⚠️ Harap isi Nama Lengkap dan NIK warga dengan benar.");
       return;
     }
 
