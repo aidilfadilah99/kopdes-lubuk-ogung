@@ -50,7 +50,69 @@ function setToStorage<T>(key: string, value: T): void {
   }
 }
 
+// Background sync to Neon Cloud Postgres
+async function pushToCloud(key: string, value: any): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    fetch("/api/db", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, value }),
+    }).catch((err) => {
+      console.warn(`[Cloud DB] Background sync error for ${key}:`, err);
+    });
+  } catch (err) {
+    console.warn(`[Cloud DB] Push failed:`, err);
+  }
+}
+
 export const DataStore = {
+  // SINKRONISASI CLOUD DATABASE
+  async syncWithCloud(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+    try {
+      const res = await fetch("/api/db", { cache: "no-store" });
+      if (!res.ok) return false;
+      const json = await res.json();
+      if (json.success && json.isCloud && json.data) {
+        const { config, users, members, savings, loans, installments, audit_logs } = json.data;
+        if (config) setToStorage(STORAGE_KEYS.CONFIG, config);
+        if (users) setToStorage(STORAGE_KEYS.USERS, users);
+        if (members) setToStorage(STORAGE_KEYS.MEMBERS, members);
+        if (savings) setToStorage(STORAGE_KEYS.SAVINGS, savings);
+        if (loans) setToStorage(STORAGE_KEYS.LOANS, loans);
+        if (installments) setToStorage(STORAGE_KEYS.INSTALLMENTS, installments);
+        if (audit_logs) setToStorage(STORAGE_KEYS.LOGS, audit_logs);
+
+        // Beritahu komponen UI bahwa data cloud terbaru sudah dimuat
+        window.dispatchEvent(new Event("kopdes-data-synced"));
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.warn("[Cloud DB] Sync error:", e);
+      return false;
+    }
+  },
+
+  // Mengambil daftar user terbaru langsung dari cloud (misal saat login di device baru)
+  async fetchFreshUsers(): Promise<User[]> {
+    if (typeof window === "undefined") return this.getUsers();
+    try {
+      const res = await fetch("/api/db?key=users", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setToStorage(STORAGE_KEYS.USERS, json.data);
+          return json.data;
+        }
+      }
+    } catch (e) {
+      console.warn("[Cloud DB] Fetch fresh users error:", e);
+    }
+    return this.getUsers();
+  },
+
   // CONFIG
   getConfig(): CooperativeConfig {
     return getFromStorage(STORAGE_KEYS.CONFIG, initialConfig);
@@ -59,6 +121,7 @@ export const DataStore = {
     const current = this.getConfig();
     const updated = { ...current, ...newConfig };
     setToStorage(STORAGE_KEYS.CONFIG, updated);
+    pushToCloud("config", updated);
     return updated;
   },
 
@@ -75,10 +138,12 @@ export const DataStore = {
       users.unshift(user);
     }
     setToStorage(STORAGE_KEYS.USERS, users);
+    pushToCloud("users", users);
   },
   deleteUser(userId: string): void {
     const users = this.getUsers().filter((u) => u.id !== userId);
     setToStorage(STORAGE_KEYS.USERS, users);
+    pushToCloud("users", users);
   },
 
   // MEMBERS
@@ -94,6 +159,7 @@ export const DataStore = {
       members.unshift(member);
     }
     setToStorage(STORAGE_KEYS.MEMBERS, members);
+    pushToCloud("members", members);
   },
 
   // SAVINGS
@@ -104,6 +170,7 @@ export const DataStore = {
     const list = this.getSavings();
     list.unshift(trx);
     setToStorage(STORAGE_KEYS.SAVINGS, list);
+    pushToCloud("savings", list);
 
     // Update member total savings
     const members = this.getMembers();
@@ -112,6 +179,7 @@ export const DataStore = {
       member.savingsTotal += trx.amount;
       if (trx.type === "POKOK") member.simpananPokokPaid = true;
       setToStorage(STORAGE_KEYS.MEMBERS, members);
+      pushToCloud("members", members);
     }
   },
 
@@ -123,6 +191,7 @@ export const DataStore = {
     const list = this.getLoans();
     list.unshift(loan);
     setToStorage(STORAGE_KEYS.LOANS, list);
+    pushToCloud("loans", list);
   },
   updateLoanStatus(
     loanId: string,
@@ -154,6 +223,7 @@ export const DataStore = {
     }
 
     setToStorage(STORAGE_KEYS.LOANS, list);
+    pushToCloud("loans", list);
     return loan;
   },
 
@@ -189,6 +259,7 @@ export const DataStore = {
       installments.push(ins);
     }
     setToStorage(STORAGE_KEYS.INSTALLMENTS, installments);
+    pushToCloud("installments", installments);
   },
   payInstallment(installmentId: string, officerName: string): LoanInstallment | null {
     const list = this.getInstallments();
@@ -199,6 +270,7 @@ export const DataStore = {
     ins.paymentDate = new Date().toISOString().split("T")[0];
     ins.officerName = officerName;
     setToStorage(STORAGE_KEYS.INSTALLMENTS, list);
+    pushToCloud("installments", list);
 
     // Update remaining loan amount
     const loans = this.getLoans();
@@ -209,6 +281,7 @@ export const DataStore = {
         loan.status = "PAID_OFF";
       }
       setToStorage(STORAGE_KEYS.LOANS, loans);
+      pushToCloud("loans", loans);
     }
 
     return ins;
@@ -234,7 +307,9 @@ export const DataStore = {
       details,
     };
     logs.unshift(newLog);
-    setToStorage(STORAGE_KEYS.LOGS, logs.slice(0, 100)); // Simpan 100 log terakhir
+    const trimmed = logs.slice(0, 100);
+    setToStorage(STORAGE_KEYS.LOGS, trimmed);
+    pushToCloud("audit_logs", trimmed);
   },
 
   // RESET

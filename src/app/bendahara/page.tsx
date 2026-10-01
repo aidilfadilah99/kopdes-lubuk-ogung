@@ -78,6 +78,11 @@ function BendaharaDashboardContent() {
 
   useEffect(() => {
     refreshData();
+    window.addEventListener("kopdes-data-synced", refreshData);
+    return () => window.removeEventListener("kopdes-data-synced", refreshData);
+  }, []);
+
+  useEffect(() => {
     const config = DataStore.getConfig();
     if (depositType === "WAJIB") setDepositAmount(config.simpananWajibMonthly);
     else if (depositType === "POKOK") setDepositAmount(config.simpananPokokAmount);

@@ -94,3 +94,5 @@ http://localhost:3000
    ```
 3. Buka [https://vercel.com](https://vercel.com), klik **"Add New Project"** & pilih repositori `kopdes-lubuk-ogung`.
 4. Vercel akan otomatis mendeteksi konfigurasi **Next.js** dan langsung melakukan deploy dalam ~1 menit!
+5. **Multi-Device Cloud Database**: Terintegrasi otomatis dengan **Neon Serverless Postgres (Vercel Storage)** sehingga data anggota, saldo, pinjaman, dan akun pengguna tersinkronisasi secara real-time di semua perangkat (komputer kantor, HP, laptop).
+

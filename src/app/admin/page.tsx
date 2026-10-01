@@ -56,7 +56,11 @@ function AdminDashboardContent() {
     setLoans(DataStore.getLoans());
   };
 
-  useEffect(() => { refreshData(); }, []);
+  useEffect(() => {
+    refreshData();
+    window.addEventListener("kopdes-data-synced", refreshData);
+    return () => window.removeEventListener("kopdes-data-synced", refreshData);
+  }, []);
 
   const notify = (msg: string) => {
     setNotification(msg);

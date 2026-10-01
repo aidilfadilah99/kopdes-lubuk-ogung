@@ -73,6 +73,8 @@ function AnggotaPortalContent() {
 
   useEffect(() => {
     refreshData();
+    window.addEventListener("kopdes-data-synced", refreshData);
+    return () => window.removeEventListener("kopdes-data-synced", refreshData);
   }, [currentUser]);
 
   const notify = (msg: string) => {

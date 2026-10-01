@@ -28,11 +28,17 @@ export default function TransparansiPublikPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [savings, setSavings] = useState<SavingsTransaction[]>([]);
 
-  useEffect(() => {
+  const refreshData = () => {
     setConfig(DataStore.getConfig());
     setMembers(DataStore.getMembers());
     setLoans(DataStore.getLoans());
     setSavings(DataStore.getSavings());
+  };
+
+  useEffect(() => {
+    refreshData();
+    window.addEventListener("kopdes-data-synced", refreshData);
+    return () => window.removeEventListener("kopdes-data-synced", refreshData);
   }, []);
 
   // Calculations

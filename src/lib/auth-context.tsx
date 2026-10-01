@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { User, UserRole } from "@/types";
 import { DataStore } from "./store";
 
@@ -21,12 +20,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize session and trigger initial cloud sync
   useEffect(() => {
+    // 1. Initial local session check
     try {
       const saved = localStorage.getItem(AUTH_SESSION_KEY);
       if (saved) {
         const parsed: User = JSON.parse(saved);
-        // Re-validate against current user store (in case user was deactivated)
         const users = DataStore.getUsers();
         const stillValid = users.find((u) => u.id === parsed.id && u.isActive !== false);
         if (stillValid) {
@@ -40,19 +40,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+
+    // 2. Perform background sync with Neon Cloud Postgres
+    DataStore.syncWithCloud().then((synced) => {
+      if (synced) {
+        const saved = localStorage.getItem(AUTH_SESSION_KEY);
+        if (saved) {
+          try {
+            const parsed: User = JSON.parse(saved);
+            const freshUsers = DataStore.getUsers();
+            const updated = freshUsers.find((u) => u.id === parsed.id && u.isActive !== false);
+            if (updated) {
+              setCurrentUser(updated);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    });
+
+    // 3. Listener for cloud data sync events
+    const handleSync = () => {
+      const saved = localStorage.getItem(AUTH_SESSION_KEY);
+      if (saved) {
+        try {
+          const parsed: User = JSON.parse(saved);
+          const freshUsers = DataStore.getUsers();
+          const updated = freshUsers.find((u) => u.id === parsed.id && u.isActive !== false);
+          if (updated) setCurrentUser(updated);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    window.addEventListener("kopdes-data-synced", handleSync);
+    return () => {
+      window.removeEventListener("kopdes-data-synced", handleSync);
+    };
   }, []);
 
   const login = async (
     username: string,
     password: string
   ): Promise<{ success: boolean; message?: string }> => {
-    const users = DataStore.getUsers();
+    const cleanUsername = username.trim().toLowerCase();
+    let users = DataStore.getUsers();
 
-    const user = users.find(
+    let user = users.find(
       (u) =>
-        u.username.toLowerCase() === username.trim().toLowerCase() ||
+        u.username.toLowerCase() === cleanUsername ||
         (u.nik && u.nik === username.trim())
     );
+
+    // Jika user belum ada di cache lokal (misal baru dibuat di device lain),
+    // ambil data real-time langsung dari Neon Cloud Postgres!
+    if (!user || user.password !== password) {
+      try {
+        const cloudUsers = await DataStore.fetchFreshUsers();
+        if (cloudUsers && cloudUsers.length > 0) {
+          users = cloudUsers;
+          user = users.find(
+            (u) =>
+              u.username.toLowerCase() === cleanUsername ||
+              (u.nik && u.nik === username.trim())
+          );
+        }
+      } catch (err) {
+        console.warn("Gagal cek user ke cloud saat login:", err);
+      }
+    }
 
     if (!user) {
       return { success: false, message: "Username atau NIK tidak ditemukan di sistem." };
