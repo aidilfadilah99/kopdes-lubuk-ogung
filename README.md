@@ -13,7 +13,7 @@ Aplikasi memiliki pembagian peran yang sangat tegas:
 1. **🔴 Master / Pengawas Utama** (`/master`)
    - Memegang wewenang tertinggi koperasi desa.
    - Otorisasi pinjaman besar (> Rp 5.000.000).
-   - Manajemen akun pengguna & staf (mengangkat/menghapus Admin, Bendahara).
+   - Manajemen akun pengguna & staf (tambah, edit, nonaktifkan, hapus Admin & Bendahara).
    - Pengaturan parameter kebijakan (Simpanan Pokok, Simpanan Wajib, Suku Bunga, Limit).
    - Rekam jejak audit (*Audit Trail Log*).
 
@@ -36,15 +36,26 @@ Aplikasi memiliki pembagian peran yang sangat tegas:
 
 ---
 
-## ⚡ Akun Demo Bawaan (1-Klik Switch di Header)
+## ⚡ Akun Demo Bawaan
 
-| Peran | Nama Pejabat / Anggota | Username | Password |
+> Sistem menggunakan login wajib — tidak ada akses tanpa autentikasi.  
+> Akun selain Master dibuat dan dikelola oleh Master melalui dashboard.
+
+| Peran | Nama Pejabat | Username | Password |
 |---|---|---|---|
-| **Master** | **Aidil Fadilah, S.T** | `master` | `password123` |
-| **Admin** | **Rifaldo Almaghribi, S.T** | `admin` | `password123` |
-| **Bendahara** | **Abil Syahdinu Pradiksa, S.T** | `bendahara` | `password123` |
-| **Anggota** | **Hassan** *(Petani Sawit)* | `hassan` | `password123` |
-| **Anggota** | **Alhamda** *(Pedagang Pasar)* | `alhamda` | `password123` |
+| **🔴 Master** | **Aidil Fadilah, S.T** | `aidil` | `kopdes2026` |
+
+> Akun Admin, Bendahara, dan Anggota dibuat oleh Master setelah sistem digunakan.  
+> Password default anggota baru = **6 digit terakhir NIK**.
+
+---
+
+## 🔐 Fitur Autentikasi
+
+- Login wajib untuk semua role — tidak ada akses instan
+- Setiap pengguna dapat **edit profil** (nama, email, WA) dan **ubah password** via menu di Header
+- Master dapat **edit / nonaktifkan / hapus** akun pengguna lain
+- Halaman `/transparansi` dapat diakses publik tanpa login
 
 ---
 

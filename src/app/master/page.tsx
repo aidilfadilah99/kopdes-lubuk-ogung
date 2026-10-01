@@ -405,10 +405,18 @@ function MasterDashboardContent() {
                 <tbody className="divide-y divide-slate-100">
                   {users.map((u) => {
                     const badge = getRoleBadge(u.role);
+                    const isInactive = u.isActive === false;
                     return (
-                      <tr key={u.id} className="hover:bg-slate-50">
+                      <tr key={u.id} className={`hover:bg-slate-50 ${isInactive ? "opacity-60" : ""}`}>
                         <td className="px-6 py-4">
-                          <div className="font-bold text-slate-900">{u.name}</div>
+                          <div className="font-bold text-slate-900 flex items-center gap-2">
+                            {u.name}
+                            {isInactive && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 font-semibold">
+                                NONAKTIF
+                              </span>
+                            )}
+                          </div>
                           {u.nik && <div className="text-[11px] text-slate-400">NIK: {u.nik}</div>}
                         </td>
                         <td className="px-6 py-4 font-mono font-medium text-slate-700">

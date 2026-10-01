@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Save, AlertCircle, CheckCircle, User, Lock, ToggleLeft, ToggleRight } from "lucide-react";
+import { X, Save, AlertCircle, CheckCircle, User, Lock, ToggleLeft, ToggleRight, Trash2 } from "lucide-react";
 import { DataStore } from "@/lib/store";
 import { User as UserType, UserRole } from "@/types";
 
@@ -29,6 +29,7 @@ export function EditUserModal({ user, onClose, onSaved, currentMasterId }: EditU
   const [resetPassword, setResetPassword] = useState("");
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isSelf = user.id === currentMasterId;
 
@@ -162,6 +163,52 @@ export function EditUserModal({ user, onClose, onSaved, currentMasterId }: EditU
                 className={`transition-colors ${isActive ? "text-green-600 hover:text-green-700" : "text-gray-400 hover:text-gray-500"}`}>
                 {isActive ? <ToggleRight className="w-8 h-8" /> : <ToggleLeft className="w-8 h-8" />}
               </button>
+            </div>
+          )}
+
+          {/* Hapus Akun */}
+          {!isSelf && (
+            <div className="border border-red-200 rounded-xl overflow-hidden">
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="w-full px-4 py-3 flex items-center gap-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Hapus Akun Pengguna Ini
+                </button>
+              ) : (
+                <div className="p-3 bg-red-50 space-y-2">
+                  <p className="text-sm font-semibold text-red-800 flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4" />
+                    Yakin hapus akun <span className="underline">{user.name}</span>?
+                  </p>
+                  <p className="text-xs text-red-600">Tindakan ini permanen dan tidak dapat dibatalkan. Data login akan dihapus dari sistem.</p>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => setConfirmDelete(false)}
+                      className="flex-1 px-3 py-2 rounded-lg border border-red-300 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors">
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        DataStore.deleteUser(user.id);
+                        DataStore.addAuditLog(
+                          "DELETE_USER_MASTER",
+                          `Master menghapus akun pengguna: ${user.name} (${user.role})`,
+                          { id: currentMasterId, name: "Master", role: "MASTER" }
+                        );
+                        onSaved();
+                        onClose();
+                      }}
+                      className="flex-1 px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors"
+                    >
+                      Hapus Permanen
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
