@@ -15,7 +15,8 @@ import {
   Menu, 
   X,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Scale
 } from "lucide-react";
 import { UserRole } from "@/types";
 
@@ -34,10 +35,12 @@ export default function Header() {
     { href: "/admin", label: "Dashboard Admin", role: "ADMIN", icon: UserCheck },
     { href: "/bendahara", label: "Loket Bendahara", role: "BENDAHARA", icon: Wallet },
     { href: "/anggota", label: "Portal Anggota", role: "ANGGOTA", icon: User },
+    { href: "/transparansi", label: "Transparansi Publik", role: "ALL", icon: Scale },
   ];
 
   const filteredLinks = navLinks.filter((link) => {
-    if (currentUser.role === "MASTER") return true; // Master bisa akses semua menu review
+    if (link.role === "ALL") return true;
+    if (currentUser.role === "MASTER") return true;
     if (currentUser.role === "ADMIN") return link.role !== "MASTER";
     if (currentUser.role === "BENDAHARA") return link.role === "BENDAHARA" || link.role === "ANGGOTA";
     return link.role === "ANGGOTA";

@@ -18,6 +18,7 @@ import {
   Building,
   CheckCircle2,
   Lock,
+  Scale,
 } from "lucide-react";
 import { UserRole } from "@/types";
 
@@ -103,6 +104,18 @@ export default function HomePage() {
               </div>
             </div>
           )}
+
+          {/* Public Transparency Quick Button */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/transparansi"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105"
+            >
+              <Scale className="w-4 h-4 text-slate-900" />
+              Buka Portal Transparansi Publik (Bebas Akses Seluruh Warga)
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
       </section>
 
