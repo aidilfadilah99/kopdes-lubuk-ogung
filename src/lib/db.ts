@@ -2,14 +2,25 @@ import { neon, NeonQueryFunction } from "@neondatabase/serverless";
 
 // Helper to get connection string from Vercel Neon environment variables
 export function getDatabaseUrl(): string | null {
-  return (
-    process.env.STORAGE_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.DATABASE_URL ||
-    process.env.STORAGE_PRISMA_URL ||
-    process.env.POSTGRES_PRISMA_URL ||
-    null
-  );
+  if (process.env.STORAGE_URL) return process.env.STORAGE_URL;
+  if (process.env.POSTGRES_URL) return process.env.POSTGRES_URL;
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (process.env.STORAGE_PRISMA_URL) return process.env.STORAGE_PRISMA_URL;
+  if (process.env.POSTGRES_PRISMA_URL) return process.env.POSTGRES_PRISMA_URL;
+  if (process.env.STORAGE_URL_NON_POOLING) return process.env.STORAGE_URL_NON_POOLING;
+  if (process.env.POSTGRES_URL_NON_POOLING) return process.env.POSTGRES_URL_NON_POOLING;
+
+  // Deteksi otomatis jika Vercel menggunakan nama prefix custom
+  for (const [key, val] of Object.entries(process.env)) {
+    if (
+      typeof val === "string" &&
+      (val.startsWith("postgres://") || val.startsWith("postgresql://"))
+    ) {
+      return val;
+    }
+  }
+
+  return null;
 }
 
 export function getDb(): NeonQueryFunction<false, false> | null {
