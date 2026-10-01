@@ -21,13 +21,13 @@ import {
 } from "./mock-data";
 
 const STORAGE_KEYS = {
-  USERS: "kopdes_users_v1",
-  MEMBERS: "kopdes_members_v1",
-  SAVINGS: "kopdes_savings_v1",
-  LOANS: "kopdes_loans_v1",
-  INSTALLMENTS: "kopdes_installments_v1",
-  CONFIG: "kopdes_config_v1",
-  LOGS: "kopdes_logs_v1",
+  USERS: "kopdes_users_v2",
+  MEMBERS: "kopdes_members_v2",
+  SAVINGS: "kopdes_savings_v2",
+  LOANS: "kopdes_loans_v2",
+  INSTALLMENTS: "kopdes_installments_v2",
+  CONFIG: "kopdes_config_v2",
+  LOGS: "kopdes_logs_v2",
 };
 
 function getFromStorage<T>(key: string, defaultValue: T): T {

@@ -38,13 +38,13 @@ Aplikasi memiliki pembagian peran yang sangat tegas:
 
 ## ⚡ Akun Demo Bawaan (1-Klik Switch di Header)
 
-| Peran | Nama | Username | Password |
+| Peran | Nama Pejabat / Anggota | Username | Password |
 |---|---|---|---|
-| **Master** | H. Syahrul Ramadhan, M.Si | `master` | `password123` |
-| **Admin** | Rahmat Hidayat, S.P | `admin` | `password123` |
-| **Bendahara** | Siti Aminah, S.E | `bendahara` | `password123` |
-| **Anggota** | Budi Santoso (Petani Sawit) | `budi` | `password123` |
-| **Anggota** | Siti Rohmah (Pedagang) | `siti_rohmah` | `password123` |
+| **Master** | **Aidil Fadilah, S.T** | `master` | `password123` |
+| **Admin** | **Rifaldo Almaghribi, S.T** | `admin` | `password123` |
+| **Bendahara** | **Abil Syahdinu Pradiksa, S.T** | `bendahara` | `password123` |
+| **Anggota** | **Hassan** *(Petani Sawit)* | `hassan` | `password123` |
+| **Anggota** | **Alhamda** *(Pedagang Pasar)* | `alhamda` | `password123` |
 
 ---
 
@@ -69,7 +69,7 @@ http://localhost:3000
    git add .
    git commit -m "feat: inisialisasi sistem Kopdes Lubuk Ogung"
    git branch -M main
-   git remote add origin https://github.com/USERNAME_ANDA/kopdes-lubuk-ogung.git
+   git remote add origin https://github.com/aidilfadilah99/kopdes-lubuk-ogung.git
    git push -u origin main
    ```
 3. Buka [https://vercel.com](https://vercel.com), klik **"Add New Project"** & pilih repositori `kopdes-lubuk-ogung`.

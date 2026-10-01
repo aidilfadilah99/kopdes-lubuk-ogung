@@ -90,7 +90,7 @@ export default function AnggotaPortal() {
           onClick={() => quickLogin("ANGGOTA")}
           className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-sm shadow-md transition-colors"
         >
-          Masuk sebagai Anggota Warga (Budi Santoso - Petani Sawit)
+          Masuk sebagai Anggota Warga (Hassan - Petani Sawit)
         </button>
       </div>
     );
