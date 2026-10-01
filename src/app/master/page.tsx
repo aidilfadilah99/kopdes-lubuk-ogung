@@ -165,6 +165,7 @@ function MasterDashboardContent() {
 
   // Pending Loans requiring Master approval
   const pendingMasterLoans = loans.filter((l) => l.status === "PENDING_MASTER");
+  const rejectedLoans = loans.filter((l) => l.status === "REJECTED");
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -367,6 +368,72 @@ function MasterDashboardContent() {
               </div>
             )}
           </div>
+
+          {/* Riwayat Pinjaman Ditolak di Master */}
+          {rejectedLoans.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm border border-rose-200 overflow-hidden">
+              <div className="p-5 border-b border-rose-100 flex items-center justify-between bg-rose-50/60">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-700 font-bold">
+                    <XCircle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">
+                      Daftar Pengajuan yang Ditolak ({rejectedLoans.length})
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Rekap berkas pinjaman yang tidak lolos persetujuan beserta alasan resmi yang dicatat.
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 bg-rose-100 text-rose-800 rounded-lg">
+                  {rejectedLoans.length} Ditolak
+                </span>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {rejectedLoans.map((loan) => (
+                  <div key={loan.id} className="p-5 flex flex-col md:flex-row md:items-start justify-between gap-4 hover:bg-slate-50">
+                    <div className="space-y-2 max-w-2xl">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                          {loan.id}
+                        </span>
+                        <span className="text-xs font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200">
+                          Ditolak
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          Diajukan: {formatDateIndo(loan.submissionDate)}
+                        </span>
+                        {loan.rejectionDate && (
+                          <span className="text-xs text-slate-400">
+                            &bull; Tanggal Keputusan: {formatDateIndo(loan.rejectionDate)}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="font-bold text-slate-900 text-sm">
+                        {loan.memberName} &bull; Plafon: {formatRupiah(loan.amount)} ({loan.tenorMonths} Bulan)
+                      </h4>
+                      <p className="text-xs text-slate-600">
+                        <span className="font-medium text-slate-700">Tujuan Modal:</span> {loan.purpose}
+                      </p>
+
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-950">
+                        <span className="font-bold text-rose-800 block mb-0.5">Alasan Resmi Penolakan:</span>
+                        <span className="italic font-medium">&ldquo;{loan.rejectionReason || "Syarat administrasi belum lengkap"}&rdquo;</span>
+                        {(loan.rejectedBy || loan.masterApprover || loan.adminReviewer) && (
+                          <span className="block mt-1 text-[11px] text-rose-600 font-semibold">
+                            Diputuskan oleh: {loan.rejectedBy || loan.masterApprover || loan.adminReviewer}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

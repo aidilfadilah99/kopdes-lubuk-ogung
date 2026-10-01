@@ -147,7 +147,10 @@ export const DataStore = {
       // generate installment schedule
       this.generateInstallmentSchedule(loan);
     } else if (status === "REJECTED") {
-      loan.rejectionReason = note || "Ditolak oleh pengurus";
+      loan.rejectionReason = note || "Ditolak oleh pengurus koperasi";
+      loan.rejectedBy = actorName;
+      loan.rejectionDate = now;
+      loan.remainingAmount = 0;
     }
 
     setToStorage(STORAGE_KEYS.LOANS, list);

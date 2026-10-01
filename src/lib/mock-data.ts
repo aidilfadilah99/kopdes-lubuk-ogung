@@ -255,6 +255,25 @@ export const initialLoans: Loan[] = [
     remainingAmount: 15000000,
     collateralDescription: "Sertifikat Hak Milik No. 441 Desa Lubuk Ogung",
   },
+  {
+    id: "pinj-2026-004",
+    memberId: "mbr-001",
+    memberName: "Hassan",
+    memberNik: "1405021204850001",
+    amount: 20000000,
+    tenorMonths: 18,
+    interestRatePercent: 1.0,
+    monthlyInstallment: 1311111,
+    purpose: "Pengadaan Mesin Pengolah Limbah Sawit",
+    submissionDate: "2026-02-22",
+    status: "REJECTED",
+    adminReviewer: "Rifaldo Almaghribi, S.T",
+    rejectedBy: "Rifaldo Almaghribi, S.T (Admin)",
+    rejectionDate: "2026-02-23",
+    rejectionReason: "Surat Keterangan Usaha (SKU) dari Kantor Desa belum dilampirkan dan bukti agunan belum dilegalisir RT/RW.",
+    remainingAmount: 0,
+    collateralDescription: "Kuitansi Pembelian Mesin Pengolah",
+  },
 ];
 
 export const initialInstallments: LoanInstallment[] = [

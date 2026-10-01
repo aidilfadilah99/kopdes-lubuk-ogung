@@ -27,6 +27,7 @@ import {
   TrendingUp,
   AlertCircle,
   FileText,
+  XCircle,
 } from "lucide-react";
 
 function AnggotaPortalContent() {
@@ -319,8 +320,16 @@ function AnggotaPortalContent() {
               {myLoans.map((loan) => {
                 const statusBadge = getLoanStatusBadge(loan.status);
                 const loanInstallments = myInstallments.filter((i) => i.loanId === loan.id);
+                const isRejected = loan.status === "REJECTED";
+                const rejector = loan.rejectedBy || loan.masterApprover || loan.adminReviewer;
+
                 return (
-                  <div key={loan.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-6">
+                  <div
+                    key={loan.id}
+                    className={`bg-white rounded-2xl shadow-sm border p-6 space-y-6 transition-all ${
+                      isRejected ? "border-rose-300 ring-1 ring-rose-200" : "border-slate-200"
+                    }`}
+                  >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                       <div>
                         <div className="flex items-center gap-2">
@@ -340,12 +349,66 @@ function AnggotaPortalContent() {
                       </div>
 
                       <div className="text-left sm:text-right">
-                        <span className="text-xs text-slate-400 block">Sisa Kewajiban Pokok + Jasa:</span>
-                        <span className="text-xl font-extrabold text-slate-900">
-                          {formatRupiah(loan.remainingAmount)}
-                        </span>
+                        {isRejected ? (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold border border-rose-200">
+                            <XCircle className="w-4 h-4 text-rose-600" />
+                            Status: Tidak Disetujui
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-xs text-slate-400 block">Sisa Kewajiban Pokok + Jasa:</span>
+                            <span className="text-xl font-extrabold text-slate-900">
+                              {formatRupiah(loan.remainingAmount)}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
+
+                    {/* BANNER ALASAN PENOLAKAN DARI PENGURUS */}
+                    {isRejected && (
+                      <div className="bg-rose-50 border-2 border-rose-200 rounded-2xl p-5 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center flex-shrink-0 text-rose-700">
+                            <XCircle className="w-6 h-6 text-rose-600" />
+                          </div>
+                          <div className="space-y-1 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="text-xs font-extrabold text-rose-900 uppercase tracking-wider">
+                                Keterangan Alasan Penolakan Pengajuan
+                              </h4>
+                              {rejector && (
+                                <span className="text-[11px] font-bold text-rose-700 bg-white/80 px-2.5 py-0.5 rounded-full border border-rose-200">
+                                  Ditolak oleh: {rejector}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-rose-600">
+                              {loan.rejectionDate
+                                ? `Tanggal keputusan: ${formatDateIndo(loan.rejectionDate)}`
+                                : "Diverifikasi melalui verifikasi berkas koperasi desa"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Catatan Alasan dari Pengurus */}
+                        <div className="bg-white rounded-xl border border-rose-200 p-4 shadow-sm">
+                          <p className="text-[11px] text-rose-500 font-bold uppercase tracking-wider mb-1">
+                            Alasan / Catatan Penolakan:
+                          </p>
+                          <p className="text-sm font-semibold text-rose-950 leading-relaxed italic bg-rose-50/50 p-2.5 rounded-lg border border-rose-100">
+                            &ldquo;{loan.rejectionReason || "Syarat administrasi atau kelayakan dokumen agunan belum memenuhi kriteria AD/ART Koperasi Desa Lubuk Ogung."}&rdquo;
+                          </p>
+                        </div>
+
+                        <div className="text-xs text-rose-800 bg-rose-100/70 p-3 rounded-xl flex items-start gap-2 leading-relaxed">
+                          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                          <span>
+                            <strong>Petunjuk untuk Anggota:</strong> Mohon perbaiki atau lengkapi persyaratan sesuai catatan di atas. Setelah dokumen siap, Anda dapat mengajukan permohonan pinjaman baru melalui tab <strong>Simulasi & Pengajuan</strong>.
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                       <div className="bg-slate-50 p-3 rounded-xl">

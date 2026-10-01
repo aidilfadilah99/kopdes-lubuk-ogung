@@ -71,6 +71,8 @@ export interface Loan {
   adminReviewer?: string;
   masterApprover?: string;
   rejectionReason?: string;
+  rejectedBy?: string;
+  rejectionDate?: string;
   remainingAmount: number;
   collateralDescription?: string; // Jaminan (misal: SKGR, BPKB, Surat Tanah)
 }
