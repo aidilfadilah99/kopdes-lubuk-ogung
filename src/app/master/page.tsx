@@ -30,7 +30,6 @@ import {
   UserPlus,
   AlertTriangle,
   Building,
-  DollarSign,
   TrendingUp,
 } from "lucide-react";
 
@@ -748,6 +747,7 @@ function MasterDashboardContent() {
                   onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value as UserRole })}
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none font-medium"
                 >
+                  <option value="MANAGER">MANAGER (Semua Akses Operasional: Admin, Bendahara, Anggota)</option>
                   <option value="ADMIN">ADMIN (Sekretaris / Pengurus Operasional)</option>
                   <option value="BENDAHARA">BENDAHARA (Petugas Simpan Pinjam / Kasir)</option>
                   <option value="MASTER">MASTER (Wakil Ketua Pengawas)</option>

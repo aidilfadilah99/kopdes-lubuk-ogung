@@ -33,6 +33,7 @@ export default function LoginPage() {
     if (!isLoading && currentUser) {
       const map: Record<string, string> = {
         MASTER: "/master",
+        MANAGER: "/admin",
         ADMIN: "/admin",
         BENDAHARA: "/bendahara",
         ANGGOTA: "/anggota",

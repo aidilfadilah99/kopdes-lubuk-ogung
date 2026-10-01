@@ -28,6 +28,17 @@ export const initialUsers: User[] = [
     createdAt: "2026-01-01T08:00:00Z",
   },
   {
+    id: "usr-manager-1",
+    username: "manager",
+    password: "kopdes2026",
+    name: "Surya Pratama, S.E",
+    role: "MANAGER",
+    email: "surya.manager@lubukogung.desa.id",
+    phone: "0812-9988-7766",
+    isActive: true,
+    createdAt: "2026-01-01T10:00:00Z",
+  },
+  {
     id: "usr-admin-1",
     username: "rifaldo",
     password: "kopdes2026",

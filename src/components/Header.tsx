@@ -23,6 +23,7 @@ import {
 
 const ROLE_LABELS: Record<string, string> = {
   MASTER: "Master",
+  MANAGER: "Manager",
   ADMIN: "Admin",
   BENDAHARA: "Bendahara",
   ANGGOTA: "Anggota",
@@ -30,6 +31,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLE_COLORS: Record<string, string> = {
   MASTER: "bg-red-100 text-red-800",
+  MANAGER: "bg-purple-100 text-purple-800",
   ADMIN: "bg-blue-100 text-blue-800",
   BENDAHARA: "bg-green-100 text-green-800",
   ANGGOTA: "bg-yellow-100 text-yellow-800",
@@ -57,6 +59,13 @@ export default function Header() {
         ...(currentUser.role === "MASTER"
           ? [{ href: "/master", label: "Dashboard Master", icon: LayoutDashboard }]
           : []),
+        ...(currentUser.role === "MANAGER"
+          ? [
+              { href: "/admin", label: "Admin & Warga", icon: Users },
+              { href: "/bendahara", label: "Loket Keuangan", icon: Wallet },
+              { href: "/anggota", label: "Portal Anggota", icon: User },
+            ]
+          : []),
         ...(currentUser.role === "ADMIN"
           ? [{ href: "/admin", label: "Dashboard Admin", icon: Users }]
           : []),
@@ -75,7 +84,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={currentUser ? `/${currentUser.role.toLowerCase()}` : "/"} className="flex items-center gap-3 min-w-0">
+          <Link href={currentUser ? (currentUser.role === "MANAGER" ? "/admin" : `/${currentUser.role.toLowerCase()}`) : "/"} className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 bg-red-700 rounded-lg flex items-center justify-center flex-shrink-0">
               <Building2 className="w-5 h-5 text-white" />
             </div>

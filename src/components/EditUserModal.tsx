@@ -14,6 +14,7 @@ interface EditUserModalProps {
 
 const ROLE_OPTIONS: { value: UserRole; label: string; color: string }[] = [
   { value: "MASTER", label: "Master (Ketua Pengawas)", color: "text-red-700" },
+  { value: "MANAGER", label: "Manager (Semua Akses Operasional)", color: "text-purple-700" },
   { value: "ADMIN", label: "Admin (Sekretaris)", color: "text-blue-700" },
   { value: "BENDAHARA", label: "Bendahara (Kasir)", color: "text-green-700" },
   { value: "ANGGOTA", label: "Anggota Warga", color: "text-yellow-700" },

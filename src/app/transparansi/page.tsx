@@ -9,7 +9,6 @@ import {
   Building2,
   Users,
   Wallet,
-  BadgeDollarSign,
   TrendingUp,
   PieChart,
   ShieldCheck,
@@ -21,6 +20,7 @@ import {
   Scale,
   Sparkles,
 } from "lucide-react";
+import { RpBadge } from "@/components/RupiahIcons";
 
 export default function TransparansiPublikPage() {
   const [config, setConfig] = useState<CooperativeConfig | null>(null);
@@ -137,7 +137,7 @@ export default function TransparansiPublikPage() {
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-2">
           <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <BadgeDollarSign className="w-5 h-5" />
+            <RpBadge className="w-5 h-5" />
           </div>
           <span className="text-xs text-slate-500 font-medium block">Pinjaman Modal Tersalurkan</span>
           <div className="text-xl font-extrabold text-slate-900">

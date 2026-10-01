@@ -13,6 +13,7 @@ export default function HomePage() {
     if (!isLoading && currentUser) {
       const map: Record<string, string> = {
         MASTER: "/master",
+        MANAGER: "/admin",
         ADMIN: "/admin",
         BENDAHARA: "/bendahara",
         ANGGOTA: "/anggota",

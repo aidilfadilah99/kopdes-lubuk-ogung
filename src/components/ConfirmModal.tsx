@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { X, CheckCircle, AlertTriangle, HelpCircle, DollarSign, Wallet } from "lucide-react";
+import { X, CheckCircle, AlertTriangle, HelpCircle, Wallet } from "lucide-react";
+import { RpBanknote } from "@/components/RupiahIcons";
 
 export interface ConfirmDetailItem {
   label: string;
@@ -16,7 +17,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   theme?: "emerald" | "blue" | "amber" | "rose" | "indigo";
-  icon?: "check" | "alert" | "dollar" | "wallet" | "help";
+  icon?: "check" | "alert" | "dollar" | "rupiah" | "wallet" | "help";
   onConfirm: () => void;
   onClose: () => void;
 }
@@ -68,7 +69,8 @@ export function ConfirmModal({
   const renderIcon = () => {
     switch (icon) {
       case "dollar":
-        return <DollarSign className="w-5 h-5" />;
+      case "rupiah":
+        return <RpBanknote className="w-5 h-5" />;
       case "wallet":
         return <Wallet className="w-5 h-5" />;
       case "alert":

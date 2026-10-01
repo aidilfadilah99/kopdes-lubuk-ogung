@@ -21,6 +21,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       // Logged in but wrong role — redirect to their own dashboard
       const roleMap: Record<UserRole, string> = {
         MASTER: "/master",
+        MANAGER: "/admin",
         ADMIN: "/admin",
         BENDAHARA: "/bendahara",
         ANGGOTA: "/anggota",

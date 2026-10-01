@@ -72,8 +72,11 @@ export function ProfileModal({ onClose }: ProfileModalProps) {
   };
 
   const ROLE_LABELS: Record<string, string> = {
-    MASTER: "Master (Ketua Pengawas)", ADMIN: "Admin (Sekretaris)",
-    BENDAHARA: "Bendahara (Kasir)", ANGGOTA: "Anggota Warga",
+    MASTER: "Master (Ketua Pengawas)",
+    MANAGER: "Manager Koperasi",
+    ADMIN: "Admin (Sekretaris)",
+    BENDAHARA: "Bendahara (Kasir)",
+    ANGGOTA: "Anggota Warga",
   };
 
   return (

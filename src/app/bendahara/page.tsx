@@ -25,11 +25,10 @@ import {
   CheckCircle,
   Printer,
   Search,
-  DollarSign,
   CreditCard,
-  Receipt,
   AlertCircle,
 } from "lucide-react";
+import { RpReceipt, RpBanknote } from "@/components/RupiahIcons";
 
 function BendaharaDashboardContent() {
   const { currentUser } = useAuth();
@@ -261,7 +260,7 @@ function BendaharaDashboardContent() {
         </div>
 
         <div className="bg-white/10 backdrop-blur border border-white/20 p-4 rounded-2xl flex items-center gap-4">
-          <Receipt className="w-8 h-8 text-emerald-300" />
+          <RpReceipt className="w-8 h-8 text-emerald-300" />
           <div className="text-xs">
             <span className="text-emerald-200 block">Kwitansi Siap Cetak</span>
             <span className="font-bold text-white text-sm">Otomatis Terverifikasi</span>
@@ -325,7 +324,7 @@ function BendaharaDashboardContent() {
               : "bg-white text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <Receipt className="w-4 h-4" />
+          <RpReceipt className="w-4 h-4" />
           Riwayat Transaksi Terakhir
         </button>
       </div>
@@ -625,7 +624,7 @@ function BendaharaDashboardContent() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 text-center space-y-4 border-b border-slate-100">
               <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                <Receipt className="w-6 h-6" />
+                <RpReceipt className="w-6 h-6" />
               </div>
               <div>
                 <h4 className="font-extrabold text-slate-900 text-base">KOPERASI MERAH PUTIH</h4>
@@ -701,7 +700,7 @@ function BendaharaDashboardContent() {
 
 export default function BendaharaDashboard() {
   return (
-    <ProtectedRoute allowedRoles={["BENDAHARA"]}>
+    <ProtectedRoute allowedRoles={["BENDAHARA", "MANAGER"]}>
       <BendaharaDashboardContent />
     </ProtectedRoute>
   );

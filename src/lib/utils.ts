@@ -44,6 +44,11 @@ export function getRoleBadge(role: UserRole) {
         label: "Master / Pengawas",
         className: "bg-red-100 text-red-800 border-red-200",
       };
+    case "MANAGER":
+      return {
+        label: "Manager Koperasi",
+        className: "bg-purple-100 text-purple-800 border-purple-200",
+      };
     case "ADMIN":
       return {
         label: "Admin / Pengurus",

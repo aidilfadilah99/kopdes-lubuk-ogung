@@ -621,7 +621,7 @@ function AnggotaPortalContent() {
 
 export default function AnggotaPortal() {
   return (
-    <ProtectedRoute allowedRoles={["ANGGOTA"]}>
+    <ProtectedRoute allowedRoles={["ANGGOTA", "MANAGER"]}>
       <AnggotaPortalContent />
     </ProtectedRoute>
   );
