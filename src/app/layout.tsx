@@ -26,7 +26,7 @@ export default function RootLayout({
             <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <p className="font-semibold text-slate-700">
-                  Koperasi Desa Merah Putih Lubuk Ogung &copy; 2026
+                  Koperasi Desa Merah Putih Lubuk Ogung &copy; {new Date().getFullYear()}
                 </p>
                 <p className="mt-1 text-slate-400">
                   Desa Lubuk Ogung, Kec. Bandar Sei Kijang, Kab. Pelalawan, Riau | Siap Hosting Vercel

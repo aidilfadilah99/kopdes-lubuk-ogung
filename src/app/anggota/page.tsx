@@ -256,7 +256,7 @@ function AnggotaPortalContent() {
 
             <div className="bg-gradient-to-br from-amber-50 to-orange-100 p-5 rounded-2xl shadow-sm border border-amber-200">
               <span className="text-xs text-amber-800 font-bold flex items-center gap-1">
-                <TrendingUp className="w-4 h-4 text-amber-600" /> Estimasi SHU 2026
+                <TrendingUp className="w-4 h-4 text-amber-600" /> Estimasi SHU {config?.currentFiscalYear || new Date().getFullYear()}
               </span>
               <h3 className="text-xl font-extrabold text-amber-950 mt-1">
                 {formatRupiah(estimatedShuMember)}

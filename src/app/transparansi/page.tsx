@@ -54,7 +54,8 @@ export default function TransparansiPublikPage() {
     "Dusun IV": members.filter((m) => m.dusun === "Dusun IV").length,
   };
 
-  // SHU Allocations (Standard Indonesian Cooperative AD/ART)
+  // Fiscal Year & SHU Allocations (Standard Indonesian Cooperative AD/ART)
+  const fiscalYear = config?.currentFiscalYear || new Date().getFullYear();
   const shuTotal = config?.shuEstimateTotal || 48500000;
   const shuCadangan = Math.round(shuTotal * 0.40); // 40%
   const shuJasaAnggota = Math.round(shuTotal * 0.40); // 40%
@@ -101,7 +102,7 @@ export default function TransparansiPublikPage() {
         <div className="pt-2 flex flex-wrap gap-4 text-xs font-mono text-slate-400">
           <div>Badan Hukum: <span className="text-white font-bold">{config?.legalNumber || "-"}</span></div>
           <div>&bull;</div>
-          <div>Tahun Buku: <span className="text-white font-bold">{config?.currentFiscalYear || 2026}</span></div>
+          <div>Tahun Buku: <span className="text-white font-bold">{fiscalYear}</span></div>
           <div>&bull;</div>
           <div>Wilayah: <span className="text-white font-bold">Kec. Bandar Sei Kijang, Kab. Pelalawan</span></div>
         </div>
@@ -152,7 +153,7 @@ export default function TransparansiPublikPage() {
           <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
             <TrendingUp className="w-5 h-5" />
           </div>
-          <span className="text-xs text-slate-500 font-medium block">Proyeksi SHU Tahun 2026</span>
+          <span className="text-xs text-slate-500 font-medium block">Proyeksi SHU Tahun {fiscalYear}</span>
           <div className="text-xl font-extrabold text-amber-700">
             {formatRupiah(shuTotal)}
           </div>

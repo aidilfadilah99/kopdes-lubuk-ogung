@@ -562,8 +562,8 @@ function MasterDashboardContent() {
                   </label>
                   <input
                     type="number"
-                    value={configForm.currentFiscalYear || 2026}
-                    onChange={(e) => setConfigForm({ ...configForm, currentFiscalYear: parseInt(e.target.value) || 2026 })}
+                    value={configForm.currentFiscalYear || new Date().getFullYear()}
+                    onChange={(e) => setConfigForm({ ...configForm, currentFiscalYear: parseInt(e.target.value) || new Date().getFullYear() })}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-red-500 focus:outline-none"
                   />
                 </div>
