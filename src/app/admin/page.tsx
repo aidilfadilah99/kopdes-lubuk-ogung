@@ -25,6 +25,7 @@ import {
   Building2,
   XCircle,
   MapPin,
+  Pencil,
 } from "lucide-react";
 
 function AdminDashboardContent() {
@@ -49,6 +50,20 @@ function AdminDashboardContent() {
     dusun: "Dusun I" as Member["dusun"],
     address: "",
     occupation: "Petani Sawit",
+  });
+
+  // Edit Member Modal
+  const [isEditMemberOpen, setIsEditMemberOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    nik: "",
+    noKk: "",
+    phone: "",
+    email: "",
+    dusun: "Dusun I" as Member["dusun"],
+    address: "",
+    occupation: "",
   });
 
   const refreshData = () => {
@@ -86,6 +101,12 @@ function AdminDashboardContent() {
     const nikDigits = newMember.nik.replace(/\D/g, "");
     if (nikDigits.length !== 16) {
       notify("⚠️ NIK harus tepat 16 digit angka.");
+      return;
+    }
+    // Cek NIK unik — tidak boleh terdaftar dua kali
+    const nikExists = members.some((m) => m.nik === newMember.nik);
+    if (nikExists) {
+      notify("⚠️ NIK ini sudah terdaftar! Setiap warga hanya memiliki satu NIK.");
       return;
     }
     if (newMember.noKk) {
@@ -148,6 +169,80 @@ function AdminDashboardContent() {
       address: "",
       occupation: "Petani Sawit",
     });
+    refreshData();
+  };
+
+  // Open Edit Member Modal
+  const openEditMember = (m: Member) => {
+    setEditingMember(m);
+    setEditForm({
+      name: m.name,
+      nik: m.nik,
+      noKk: m.noKk === "-" ? "" : m.noKk,
+      phone: m.phone === "-" ? "" : m.phone,
+      email: m.email || "",
+      dusun: m.dusun,
+      address: m.address,
+      occupation: m.occupation,
+    });
+    setIsEditMemberOpen(true);
+  };
+
+  // Handle Save Edit Member
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || !editingMember) return;
+    if (!editForm.name || !editForm.nik) {
+      notify("⚠️ Nama dan NIK wajib diisi.");
+      return;
+    }
+    const nikDigits = editForm.nik.replace(/\D/g, "");
+    if (nikDigits.length !== 16) {
+      notify("⚠️ NIK harus tepat 16 digit angka.");
+      return;
+    }
+    // Cek NIK unik — pastikan tidak ada anggota LAIN dengan NIK yang sama
+    const nikConflict = members.some((m) => m.nik === editForm.nik && m.id !== editingMember.id);
+    if (nikConflict) {
+      notify("⚠️ NIK ini sudah dipakai anggota lain!");
+      return;
+    }
+    if (editForm.noKk) {
+      const kkDigits = editForm.noKk.replace(/\D/g, "");
+      if (kkDigits.length !== 16) {
+        notify("⚠️ Nomor KK harus tepat 16 digit angka.");
+        return;
+      }
+    }
+
+    const updated: Member = {
+      ...editingMember,
+      name: editForm.name,
+      nik: editForm.nik,
+      noKk: editForm.noKk || "-",
+      phone: editForm.phone || "-",
+      email: editForm.email,
+      dusun: editForm.dusun,
+      address: editForm.address,
+      occupation: editForm.occupation,
+    };
+    DataStore.saveMember(updated);
+
+    // Sinkronisasi NIK & phone ke user terkait
+    const allUsers = DataStore.getUsers();
+    const linkedUser = allUsers.find((u) => u.memberId === editingMember.id);
+    if (linkedUser) {
+      DataStore.saveUser({ ...linkedUser, nik: editForm.nik, phone: editForm.phone, name: editForm.name });
+    }
+
+    DataStore.addAuditLog(
+      "EDIT_MEMBER",
+      `${currentUser.role} mengedit data anggota: ${updated.name} (${updated.nik})`,
+      { id: currentUser.id, name: currentUser.name, role: currentUser.role }
+    );
+    notify(`Data ${updated.name} berhasil diperbarui.`);
+    setIsEditMemberOpen(false);
+    setEditingMember(null);
     refreshData();
   };
 
@@ -383,16 +478,28 @@ function AdminDashboardContent() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {m.status === "PENDING_VERIFIKASI" ? (
-                          <button
-                            onClick={() => handleVerifyMember(m)}
-                            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]"
-                          >
-                            Verifikasi Sekarang
-                          </button>
-                        ) : (
-                          <span className="text-slate-400 font-mono text-[11px]">Terverifikasi</span>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Tombol Edit — tersedia untuk MASTER, MANAGER, ADMIN */}
+                          {["MASTER", "MANAGER", "ADMIN"].includes(currentUser?.role ?? "") && (
+                            <button
+                              onClick={() => openEditMember(m)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 font-semibold text-[11px] transition-colors"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </button>
+                          )}
+                          {m.status === "PENDING_VERIFIKASI" ? (
+                            <button
+                              onClick={() => handleVerifyMember(m)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px]"
+                            >
+                              Verifikasi
+                            </button>
+                          ) : (
+                            <span className="text-slate-400 font-mono text-[11px]">Terverifikasi</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -767,13 +874,172 @@ function AdminDashboardContent() {
           onClose={() => setRejectLoanTarget(null)}
         />
       )}
+
+      {/* MODAL EDIT ANGGOTA */}
+      {isEditMemberOpen && editingMember && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900">Edit Data Anggota</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{editingMember.name} — {editingMember.id}</p>
+              </div>
+              <button onClick={() => setIsEditMemberOpen(false)} className="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+              {/* Nama */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* NIK & KK */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">NIK <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                    maxLength={16}
+                    placeholder="16 digit angka"
+                    value={editForm.nik}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                      setEditForm({ ...editForm, nik: digits });
+                    }}
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:ring-2 focus:outline-none font-mono ${
+                      editForm.nik && editForm.nik.length !== 16
+                        ? "border-red-400 focus:ring-red-400"
+                        : "border-slate-300 focus:ring-blue-500"
+                    }`}
+                  />
+                  {editForm.nik.length > 0 && editForm.nik.length !== 16 && (
+                    <p className="text-red-500 text-[10px] mt-0.5">{editForm.nik.length}/16 digit</p>
+                  )}
+                  {editForm.nik.length === 16 && <p className="text-emerald-600 text-[10px] mt-0.5">✓ 16 digit</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">No. KK</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={16}
+                    placeholder="16 digit angka"
+                    value={editForm.noKk}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                      setEditForm({ ...editForm, noKk: digits });
+                    }}
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:ring-2 focus:outline-none font-mono ${
+                      editForm.noKk && editForm.noKk.length !== 16
+                        ? "border-red-400 focus:ring-red-400"
+                        : "border-slate-300 focus:ring-blue-500"
+                    }`}
+                  />
+                  {editForm.noKk.length > 0 && editForm.noKk.length !== 16 && (
+                    <p className="text-red-500 text-[10px] mt-0.5">{editForm.noKk.length}/16 digit</p>
+                  )}
+                  {editForm.noKk.length === 16 && <p className="text-emerald-600 text-[10px] mt-0.5">✓ 16 digit</p>}
+                </div>
+              </div>
+
+              {/* Dusun & Pekerjaan */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Wilayah Dusun</label>
+                  <select
+                    value={editForm.dusun}
+                    onChange={(e) => setEditForm({ ...editForm, dusun: e.target.value as Member["dusun"] })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-semibold"
+                  >
+                    <option value="Dusun I">Dusun I (Pusat / Pasar)</option>
+                    <option value="Dusun II">Dusun II (Kebun Sawit)</option>
+                    <option value="Dusun III">Dusun III (Sei Kijang Lama)</option>
+                    <option value="Dusun IV">Dusun IV (Pemukiman)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Mata Pencaharian</label>
+                  <input
+                    type="text"
+                    value={editForm.occupation}
+                    onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* HP & Email */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">No. Handphone</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0812-xxxx-xxxx"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="email@gmail.com"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Alamat */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Domisili</label>
+                <textarea
+                  rows={2}
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditMemberOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function AdminDashboard() {
   return (
-    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+    <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "MASTER"]}>
       <AdminDashboardContent />
     </ProtectedRoute>
   );
