@@ -20,6 +20,7 @@ import {
   ShoppingBag,
   Layers,
   Award,
+  Coins,
 } from "lucide-react";
 import { RpBadge } from "@/components/RupiahIcons";
 
@@ -191,7 +192,26 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
       </div>
 
       {/* STATUS KESEIMBANGAN & KPI UTAMA */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* KPI 0: TOTAL KAS BERSIH (TUNAI & BANK) */}
+        <div className="bg-gradient-to-br from-blue-700 via-indigo-700 to-indigo-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-blue-100 uppercase tracking-wider">Total Kas Bersih</span>
+            <div className="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center font-bold">
+              <Coins className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-xl sm:text-2xl font-black text-white font-mono">
+              {formatRupiah(kasTotalOperasional)}
+            </div>
+            <p className="text-[11px] text-blue-100 font-medium mt-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-blue-200" />
+              Tunai Kasir & Bank Riau Kepri
+            </p>
+          </div>
+        </div>
+
         {/* KPI 1: TOTAL AKTIVA */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
