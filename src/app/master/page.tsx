@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -174,13 +174,13 @@ function MasterDashboardContent() {
   const handleCreateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserData.username || !newUserData.name || !newUserData.password) {
-      notify("⚠️ Harap lengkapi username, password awal, dan nama lengkap.");
+      notify("âš ï¸ Harap lengkapi username, password awal, dan nama lengkap.");
       return;
     }
 
     const existingUsers = DataStore.getUsers();
     if (existingUsers.find(u => u.username.toLowerCase() === newUserData.username.toLowerCase())) {
-      notify("⚠️ Username tersebut sudah digunakan. Silakan pilih username lain.");
+      notify("âš ï¸ Username tersebut sudah digunakan. Silakan pilih username lain.");
       return;
     }
 
@@ -951,6 +951,7 @@ function MasterDashboardContent() {
                   <option value="MANAGER">MANAGER (Semua Akses Operasional: Admin, Bendahara, Anggota)</option>
                   <option value="ADMIN">ADMIN (Sekretaris / Pengurus Operasional)</option>
                   <option value="BENDAHARA">BENDAHARA (Petugas Simpan Pinjam / Kasir)</option>
+                  <option value="PENGAWAS">PENGAWAS (Dewan Pengawas Koperasi - Hanya Informatif)</option>
                   <option value="KASIR">KASIR (Kasir Toko Kopdes Mart)</option>
                   <option value="GUDANG">GUDANG (Petugas Gudang & Stok Kopdes Mart)</option>
                   <option value="MASTER">MASTER (Wakil Ketua Pengawas)</option>
@@ -1031,3 +1032,5 @@ export default function MasterDashboard() {
     </ProtectedRoute>
   );
 }
+
+
