@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ConfirmModal, ConfirmDetailItem } from "@/components/ConfirmModal";
+import { NeracaKeuangan } from "@/components/NeracaKeuangan";
 import {
   Loan,
   LoanInstallment,
@@ -27,24 +28,45 @@ import {
   Search,
   CreditCard,
   AlertCircle,
+  BarChart3,
+  MessageSquare,
+  FileSpreadsheet,
+  Layers,
+  ShieldAlert,
+  DollarSign,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  BookOpen,
+  Send,
+  AlertTriangle,
+  FileCheck,
+  Building2,
+  UserCheck,
 } from "lucide-react";
 import { RpReceipt, RpBanknote } from "@/components/RupiahIcons";
 
 function BendaharaDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "mutasi">("setoran");
+  const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "bku" | "neraca">("setoran");
 
+  // State data
   const [members, setMembers] = useState<Member[]>([]);
   const [savings, setSavings] = useState<SavingsTransaction[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [installments, setInstallments] = useState<LoanInstallment[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // New Deposit Form State
+  // Mode transaksi Loket Simpanan: SETORAN (Kas Masuk) vs PENARIKAN (Kas Keluar)
+  const [transactionMode, setTransactionMode] = useState<"SETORAN" | "PENARIKAN">("SETORAN");
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [depositType, setDepositType] = useState<SavingsType>("WAJIB");
   const [depositAmount, setDepositAmount] = useState<number>(30000);
   const [depositNotes, setDepositNotes] = useState("");
+
+  // BKU (Buku Kas Umum) Filter & Search
+  const [bkuFilter, setBkuFilter] = useState<"ALL" | "IN" | "OUT">("ALL");
+  const [bkuSearch, setBkuSearch] = useState("");
 
   // Last receipt modal
   const [receiptData, setReceiptData] = useState<{
@@ -56,6 +78,8 @@ function BendaharaDashboardContent() {
     type: string;
     date: string;
     officer: string;
+    isWithdrawal?: boolean;
+    note?: string;
   } | null>(null);
 
   // Modern Confirmation Modal State
@@ -78,15 +102,32 @@ function BendaharaDashboardContent() {
 
   useEffect(() => {
     refreshData();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "neraca") {
+        setActiveTab("neraca");
+      } else if (params.get("tab") === "bku") {
+        setActiveTab("bku");
+      }
+    }
     window.addEventListener("kopdes-data-synced", refreshData);
     return () => window.removeEventListener("kopdes-data-synced", refreshData);
   }, []);
 
   useEffect(() => {
     const config = DataStore.getConfig();
-    if (depositType === "WAJIB") setDepositAmount(config.simpananWajibMonthly);
-    else if (depositType === "POKOK") setDepositAmount(config.simpananPokokAmount);
-  }, [depositType]);
+    if (transactionMode === "SETORAN") {
+      if (depositType === "WAJIB") setDepositAmount(config.simpananWajibMonthly);
+      else if (depositType === "POKOK") setDepositAmount(config.simpananPokokAmount);
+      else if (depositType === "SUKARELA" && depositAmount === 0) setDepositAmount(50000);
+    } else {
+      // PENARIKAN SUKARELA
+      setDepositType("PENARIKAN_SUKARELA");
+      if (depositAmount === 0 || depositAmount === config.simpananWajibMonthly) {
+        setDepositAmount(50000);
+      }
+    }
+  }, [depositType, transactionMode]);
 
   const notify = (msg: string) => {
     setNotification(msg);
@@ -96,52 +137,142 @@ function BendaharaDashboardContent() {
   // ProtectedRoute ensures currentUser exists, but TS needs this explicit guard
   if (!currentUser) return null;
 
-  // Handle Submit Setoran
-  const handleSubmitDeposit = (e: React.FormEvent) => {
+  // Selected Member Object & Savings Breakdown
+  const selectedMember = useMemo(() => {
+    return members.find((m) => m.id === selectedMemberId);
+  }, [members, selectedMemberId]);
+
+  const memberSavingsBreakdown = useMemo(() => {
+    if (!selectedMemberId) return { pokok: 0, wajib: 0, sukarela: 0, total: 0 };
+    const memberTrx = savings.filter((s) => s.memberId === selectedMemberId);
+    const pokok = memberTrx.filter((s) => s.type === "POKOK").reduce((sum, s) => sum + s.amount, 0);
+    const wajib = memberTrx.filter((s) => s.type === "WAJIB").reduce((sum, s) => sum + s.amount, 0);
+    const sukarelaIn = memberTrx.filter((s) => s.type === "SUKARELA").reduce((sum, s) => sum + s.amount, 0);
+    const sukarelaOut = memberTrx.filter((s) => s.type === "PENARIKAN_SUKARELA").reduce((sum, s) => sum + s.amount, 0);
+    const sukarelaNet = Math.max(0, sukarelaIn - sukarelaOut);
+    return {
+      pokok,
+      wajib,
+      sukarela: sukarelaNet,
+      total: pokok + wajib + sukarelaNet,
+    };
+  }, [savings, selectedMemberId]);
+
+  // Handle Submit Setoran atau Penarikan
+  const handleSubmitSavingsForm = (e: React.FormEvent) => {
     e.preventDefault();
-    const member = members.find((m) => m.id === selectedMemberId);
-    if (!member) {
-      notify("⚠️ Harap pilih anggota yang menyetor.");
+    if (!selectedMember) {
+      notify("⚠️ Harap pilih anggota terlebih dahulu.");
       return;
     }
     if (depositAmount <= 0) {
-      notify("⚠️ Nominal setoran tidak valid.");
+      notify("⚠️ Nominal transaksi harus lebih besar dari Rp 0.");
       return;
     }
 
-    const trxId = `trx-s-${Date.now().toString().slice(-6)}`;
+    if (transactionMode === "SETORAN") {
+      // SETORAN SIMPANAN (KAS MASUK)
+      const trxId = `trx-s-${Date.now().toString().slice(-6)}`;
+      const newTrx: SavingsTransaction = {
+        id: trxId,
+        memberId: selectedMember.id,
+        memberName: selectedMember.name,
+        memberNik: selectedMember.nik,
+        type: depositType,
+        amount: depositAmount,
+        date: new Date().toISOString(),
+        notes: depositNotes || `Setoran Simpanan ${depositType}`,
+        officerName: currentUser.name,
+        status: "SUCCESS",
+      };
+
+      DataStore.addSavings(newTrx);
+      DataStore.addAuditLog(
+        "SETORAN_SIMPANAN",
+        `Bendahara mencatat setoran ${depositType} Rp ${depositAmount.toLocaleString("id-ID")} dari ${selectedMember.name}`,
+        { id: currentUser.id, name: currentUser.name, role: currentUser.role }
+      );
+
+      setReceiptData({
+        id: trxId,
+        title: `BUKTI SETORAN SIMPANAN ${depositType}`,
+        name: selectedMember.name,
+        nik: selectedMember.nik,
+        amount: depositAmount,
+        type: `Setoran Simpanan ${depositType}`,
+        date: new Date().toISOString(),
+        officer: currentUser.name,
+        note: depositNotes,
+      });
+
+      notify(`Setoran ${depositType} dari ${selectedMember.name} senilai ${formatRupiah(depositAmount)} berhasil dibukukan!`);
+      setDepositNotes("");
+      refreshData();
+    } else {
+      // PENARIKAN SIMPANAN SUKARELA (KAS KELUAR) - ROLE RISK MANAGEMENT
+      if (depositAmount > memberSavingsBreakdown.sukarela) {
+        notify(`⚠️ Saldo simpanan sukarela tidak mencukupi! Saldo sukarela ${selectedMember.name} hanya ${formatRupiah(memberSavingsBreakdown.sukarela)}. Simpanan pokok & wajib tidak dapat ditarik.`);
+        return;
+      }
+
+      setConfirmConfig({
+        title: "Konfirmasi Pengeluaran Kas - Penarikan Sukarela",
+        description: "PERINGATAN RISIKO KAS: Anda akan mengeluarkan uang tunai dari brankas loket kasir. Pastikan identitas anggota telah diverifikasi dan uang fisik diserahkan langsung.",
+        details: [
+          { label: "Nama Anggota", value: selectedMember.name },
+          { label: "NIK", value: selectedMember.nik },
+          { label: "Wilayah", value: selectedMember.dusun },
+          { label: "Saldo Sukarela Saat Ini", value: formatRupiah(memberSavingsBreakdown.sukarela) },
+          { label: "Nominal Ditarik (Kas Keluar)", value: formatRupiah(depositAmount), highlight: true },
+          { label: "Sisa Saldo Setelah Tarik", value: formatRupiah(memberSavingsBreakdown.sukarela - depositAmount) },
+          { label: "Petugas Kasir", value: currentUser.name },
+        ],
+        confirmText: "Ya, Keluarkan Uang Kas & Cetak Kwitansi",
+        theme: "rose",
+        icon: "alert",
+        onConfirm: () => doProcessWithdrawal(),
+      });
+    }
+  };
+
+  const doProcessWithdrawal = () => {
+    if (!selectedMember) return;
+    const trxId = `trx-w-${Date.now().toString().slice(-6)}`;
     const newTrx: SavingsTransaction = {
       id: trxId,
-      memberId: member.id,
-      memberName: member.name,
-      memberNik: member.nik,
-      type: depositType,
+      memberId: selectedMember.id,
+      memberName: selectedMember.name,
+      memberNik: selectedMember.nik,
+      type: "PENARIKAN_SUKARELA",
       amount: depositAmount,
       date: new Date().toISOString(),
-      notes: depositNotes || `Setoran Simpanan ${depositType}`,
+      notes: depositNotes || "Penarikan Tunai Simpanan Sukarela",
       officerName: currentUser.name,
       status: "SUCCESS",
     };
 
     DataStore.addSavings(newTrx);
     DataStore.addAuditLog(
-      "SETORAN_SIMPANAN",
-      `Bendahara mencatat setoran ${depositType} Rp ${depositAmount.toLocaleString("id-ID")} dari ${member.name}`,
+      "PENARIKAN_SIMPANAN",
+      `Bendahara memproses penarikan simpanan sukarela ${formatRupiah(depositAmount)} oleh ${selectedMember.name}`,
       { id: currentUser.id, name: currentUser.name, role: currentUser.role }
     );
 
     setReceiptData({
       id: trxId,
-      title: `BUKTI SETORAN SIMPANAN ${depositType}`,
-      name: member.name,
-      nik: member.nik,
+      title: "BUKTI PENARIKAN SIMPANAN SUKARELA",
+      name: selectedMember.name,
+      nik: selectedMember.nik,
       amount: depositAmount,
-      type: `Simpanan ${depositType}`,
+      type: "Penarikan Tunai (Kas Keluar)",
       date: new Date().toISOString(),
       officer: currentUser.name,
+      isWithdrawal: true,
+      note: depositNotes,
     });
 
-    notify(`Setoran ${depositType} dari ${member.name} senilai ${formatRupiah(depositAmount)} berhasil dibukukan!`);
+    notify(`Penarikan dana tunai ${formatRupiah(depositAmount)} kepada ${selectedMember.name} berhasil dibukukan!`);
+    setDepositNotes("");
     refreshData();
   };
 
@@ -192,7 +323,7 @@ function BendaharaDashboardContent() {
   const handlePayInstallment = (ins: LoanInstallment) => {
     setConfirmConfig({
       title: "Terima Pembayaran Angsuran",
-      description: `Konfirmasi penerimaan pembayaran cicilan pinjaman dari anggota warga secara resmi:`,
+      description: "Konfirmasi penerimaan pembayaran cicilan pinjaman dari anggota warga secara resmi:",
       details: [
         { label: "Nama Anggota", value: ins.memberName },
         { label: "Cicilan", value: `Angsuran Ke-${ins.installmentNo}` },
@@ -230,9 +361,113 @@ function BendaharaDashboardContent() {
     refreshData();
   };
 
+  // Kirim Pengingat Tagihan via WhatsApp (Early Warning Credit Risk)
+  const sendWaReminder = (ins: LoanInstallment) => {
+    const member = members.find((m) => m.id === ins.memberId);
+    const phone = member?.phone || "";
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone === "0" || phone === "-") {
+      notify(`⚠️ Nomor HP/WhatsApp anggota ${ins.memberName} belum terdaftar.`);
+      return;
+    }
+    const finalPhone = cleanPhone.startsWith("0") ? "62" + cleanPhone.slice(1) : cleanPhone;
+    const textMsg = `Assalamu'alaikum Wr. Wb. / Yth. Bapak/Ibu ${ins.memberName},\n\nKami dari Bendahara Koperasi Desa Merah Putih Lubuk Ogung menginformasikan bahwa jadwal tagihan angsuran pinjaman (ID: ${ins.loanId}) cicilan ke-${ins.installmentNo} sebesar *${formatRupiah(ins.amount)}* jatuh tempo pada *${formatDateIndo(ins.dueDate)}*.\n\nPembayaran dapat disetorkan langsung di Loket Bendahara Koperasi.\n\nTerima kasih atas kerjasamanya.\nSalam gotong royong,\n*Bendahara Kopdes Lubuk Ogung*`;
+    const waUrl = `https://api.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(textMsg)}`;
+    window.open(waUrl, "_blank");
+  };
+
   // Filtered loan lists
   const approvedLoansReadyToDisburse = loans.filter((l) => l.status === "APPROVED");
   const pendingInstallments = installments.filter((i) => i.status === "PENDING");
+
+  // --- BUKU KAS UMUM (BKU) & REKONSILIASI KAS HARIAN ---
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // Daftar mutasi gabungan untuk BKU
+  const bkuTransactions = useMemo(() => {
+    const list: {
+      id: string;
+      date: string;
+      type: "IN" | "OUT";
+      category: string;
+      description: string;
+      member: string;
+      amount: number;
+      officer: string;
+    }[] = [];
+
+    // 1. Simpanan & Penarikan
+    savings.forEach((s) => {
+      const isOut = s.type === "PENARIKAN_SUKARELA";
+      list.push({
+        id: s.id,
+        date: s.date,
+        type: isOut ? "OUT" : "IN",
+        category: isOut ? "Penarikan Sukarela" : `Simpanan ${s.type}`,
+        description: s.notes || (isOut ? "Penarikan Tunai Sukarela" : `Setoran Simpanan ${s.type}`),
+        member: s.memberName,
+        amount: s.amount,
+        officer: s.officerName,
+      });
+    });
+
+    // 2. Angsuran Pinjaman (Kas Masuk)
+    installments.forEach((ins) => {
+      if (ins.status === "PAID" && ins.paymentDate) {
+        list.push({
+          id: `ins-${ins.id}`,
+          date: ins.paymentDate,
+          type: "IN",
+          category: "Angsuran Pinjaman",
+          description: `Pelunasan cicilan ke-${ins.installmentNo} pinjaman ${ins.loanId}`,
+          member: ins.memberName,
+          amount: ins.amount,
+          officer: ins.officerName || "Bendahara",
+        });
+      }
+    });
+
+    // 3. Pencairan Pinjaman (Kas Keluar)
+    loans.forEach((l) => {
+      if (l.status === "DISBURSED" || l.status === "PAID_OFF") {
+        list.push({
+          id: `cair-${l.id}`,
+          date: l.disbursementDate || l.approvalDate || l.submissionDate,
+          type: "OUT",
+          category: "Pencairan Pinjaman",
+          description: `Pencairan dana modal pinjaman anggota ${l.id} (${l.tenorMonths} bln)`,
+          member: l.memberName,
+          amount: l.amount,
+          officer: "Bendahara",
+        });
+      }
+    });
+
+    // Urutkan dari terbaru
+    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [savings, installments, loans]);
+
+  // Rekonsiliasi Kas Hari Ini
+  const todayIn = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "IN")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayOut = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "OUT")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayNet = todayIn - todayOut;
+
+  // Filter BKU
+  const filteredBku = bkuTransactions.filter((t) => {
+    const matchType = bkuFilter === "ALL" || t.type === bkuFilter;
+    const matchSearch =
+      t.member.toLowerCase().includes(bkuSearch.toLowerCase()) ||
+      t.description.toLowerCase().includes(bkuSearch.toLowerCase()) ||
+      t.category.toLowerCase().includes(bkuSearch.toLowerCase()) ||
+      t.id.toLowerCase().includes(bkuSearch.toLowerCase());
+    return matchType && matchSearch;
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -249,32 +484,34 @@ function BendaharaDashboardContent() {
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-emerald-700 to-teal-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      {/* Header Banner Bendahara */}
+      <div className="bg-gradient-to-r from-emerald-800 via-teal-900 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 print:hidden">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-600/50 border border-emerald-400/30 text-xs font-semibold text-emerald-200 uppercase tracking-wider">
-            <Wallet className="w-4 h-4 text-emerald-300" />
-            Loket Kasir & Keuangan Koperasi
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+            <ShieldAlert className="w-4 h-4 text-emerald-400" />
+            Otoritas Bendahara & Pengelolaan Risiko Kas
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Loket Bendahara & Simpan Pinjam
+            Loket Keuangan & Kasir Koperasi
           </h1>
-          <p className="text-sm text-emerald-200">
-            Pencatatan setoran simpanan warga, realisasi pencairan pinjaman yang telah disetujui, dan penerimaan cicilan angsuran.
+          <p className="text-xs sm:text-sm text-emerald-200/90 max-w-2xl leading-relaxed">
+            Pusat kendali arus kas (cashflow), pencatatan setoran & penarikan sukarela warga, realisasi pencairan pinjaman, buku kas umum (BKU), serta pemantauan risiko kredit.
           </p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur border border-white/20 p-4 rounded-2xl flex items-center gap-4">
-          <RpReceipt className="w-8 h-8 text-emerald-300" />
-          <div className="text-xs">
-            <span className="text-emerald-200 block">Kwitansi Siap Cetak</span>
-            <span className="font-bold text-white text-sm">Otomatis Terverifikasi</span>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="bg-white/10 backdrop-blur border border-white/20 p-3.5 rounded-2xl flex items-center gap-3">
+            <RpReceipt className="w-8 h-8 text-emerald-300" />
+            <div className="text-xs">
+              <span className="text-emerald-200 block">Kwitansi & BKU Sah</span>
+              <span className="font-bold text-white text-sm">Anti Selisih Kasir</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
+      {/* Tabs Navigasi Bendahara */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3 print:hidden">
         <button
           onClick={() => setActiveTab("setoran")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
@@ -284,7 +521,7 @@ function BendaharaDashboardContent() {
           }`}
         >
           <ArrowDownCircle className="w-4 h-4" />
-          Loket Setoran Simpanan
+          Loket Setor & Tarik Simpanan
         </button>
 
         <button
@@ -296,7 +533,7 @@ function BendaharaDashboardContent() {
           }`}
         >
           <ArrowUpCircle className="w-4 h-4" />
-          Pencairan Pinjaman (Disbursement)
+          Pencairan Pinjaman
           {approvedLoansReadyToDisburse.length > 0 && (
             <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-xs font-bold">
               {approvedLoansReadyToDisburse.length} Siap Cair
@@ -313,38 +550,79 @@ function BendaharaDashboardContent() {
           }`}
         >
           <CalendarCheck className="w-4 h-4" />
-          Terima Pembayaran Angsuran
-          {pendingInstallments.length > 0 && (
-            <span className="ml-1 px-2 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-bold">
-              {pendingInstallments.length}
-            </span>
-          )}
+          Terima Angsuran ({pendingInstallments.length})
         </button>
 
         <button
-          onClick={() => setActiveTab("mutasi")}
+          onClick={() => setActiveTab("bku")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
-            activeTab === "mutasi"
+            activeTab === "bku"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
               : "bg-white text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <RpReceipt className="w-4 h-4" />
-          Riwayat Transaksi Terakhir
+          <BookOpen className="w-4 h-4" />
+          Buku Kas Umum (BKU)
+        </button>
+
+        <button
+          onClick={() => setActiveTab("neraca")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "neraca"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Neraca Keuangan & SHU
         </button>
       </div>
 
-      {/* TAB 1: FORM SETORAN */}
+      {/* TAB 1: LOKET SETOR & TARIK SIMPANAN */}
       {activeTab === "setoran" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-1">Formulir Setoran Kasir</h3>
-            <p className="text-xs text-slate-500 mb-6">Pencatatan kas masuk simpanan dari warga desa.</p>
+            {/* Toggle Mode Transaksi */}
+            <div className="flex rounded-xl bg-slate-100 p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => setTransactionMode("SETORAN")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  transactionMode === "SETORAN"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <ArrowDownCircle className="w-3.5 h-3.5" />
+                Setoran (Masuk)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTransactionMode("PENARIKAN")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  transactionMode === "PENARIKAN"
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <ArrowUpCircle className="w-3.5 h-3.5" />
+                Tarik Sukarela (Keluar)
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmitDeposit} className="space-y-4">
+            <h3 className="text-base font-bold text-slate-900 mb-1">
+              {transactionMode === "SETORAN" ? "Formulir Setoran Simpanan" : "Formulir Penarikan Simpanan Sukarela"}
+            </h3>
+            <p className="text-xs text-slate-500 mb-5">
+              {transactionMode === "SETORAN"
+                ? "Pencatatan uang masuk simpanan pokok, wajib, atau sukarela warga desa."
+                : "Pengeluaran kas penarikan dana sukarela anggota dengan verifikasi saldo ketat."}
+            </p>
+
+            <form onSubmit={handleSubmitSavingsForm} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Pilih Anggota Warga
+                  Pilih Anggota Warga <span className="text-red-500">*</span>
                 </label>
                 <select
                   required
@@ -352,7 +630,7 @@ function BendaharaDashboardContent() {
                   onChange={(e) => setSelectedMemberId(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 >
-                  <option value="">-- Pilih Anggota --</option>
+                  <option value="">-- Pilih Anggota Warga --</option>
                   {members.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name} ({m.dusun}) - NIK: {m.nik}
@@ -361,121 +639,207 @@ function BendaharaDashboardContent() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Jenis Simpanan
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["POKOK", "WAJIB", "SUKARELA"] as SavingsType[]).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setDepositType(type)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
-                        depositType === type
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-500 shadow-sm ring-1 ring-emerald-500"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
+              {/* Rincian Saldo Simpanan Anggota Terpilih */}
+              {selectedMember && (
+                <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl space-y-2 text-xs">
+                  <div className="font-bold text-slate-800 flex items-center justify-between">
+                    <span>{selectedMember.name}</span>
+                    <span className="text-emerald-700 font-mono font-black">{formatRupiah(memberSavingsBreakdown.total)}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-200 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 block">Pokok (Kunci):</span>
+                      <span className="font-bold text-slate-700 font-mono">{formatRupiah(memberSavingsBreakdown.pokok)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block">Wajib (Kunci):</span>
+                      <span className="font-bold text-slate-700 font-mono">{formatRupiah(memberSavingsBreakdown.wajib)}</span>
+                    </div>
+                    <div>
+                      <span className="text-emerald-700 font-bold block">Sukarela (Cair):</span>
+                      <span className="font-black text-emerald-700 font-mono">{formatRupiah(memberSavingsBreakdown.sukarela)}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
+              {/* Pilihan Jenis Simpanan (Hanya jika mode SETORAN) */}
+              {transactionMode === "SETORAN" ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Jenis Simpanan
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["POKOK", "WAJIB", "SUKARELA"] as SavingsType[]).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setDepositType(type)}
+                        className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                          depositType === type
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-500 shadow-sm ring-1 ring-emerald-500"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    Aturan Penarikan Simpanan:
+                  </div>
+                  <p>
+                    Sesuai AD/ART Koperasi, yang dapat ditarik sewaktu-waktu hanyalah <strong>Simpanan Sukarela</strong>. Simpanan Pokok & Wajib merupakan modal permanen koperasi dan tidak dapat ditarik selama berstatus anggota.
+                  </p>
+                </div>
+              )}
+
+              {/* Nominal */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nominal Setoran (Rp)
+                  {transactionMode === "SETORAN" ? "Nominal Setoran (Rp)" : "Nominal Penarikan Tunai (Rp)"} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
                   required
                   min={1000}
+                  max={transactionMode === "PENARIKAN" ? memberSavingsBreakdown.sukarela : undefined}
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(parseInt(e.target.value) || 0)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-base font-extrabold focus:outline-none font-mono ${
+                    transactionMode === "PENARIKAN"
+                      ? "border-rose-300 text-rose-900 focus:ring-2 focus:ring-rose-500"
+                      : "border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  }`}
                 />
                 <span className="text-[11px] text-slate-400 mt-1 block">
                   Terbilang: {formatRupiah(depositAmount)}
                 </span>
+                {transactionMode === "PENARIKAN" && selectedMember && depositAmount > memberSavingsBreakdown.sukarela && (
+                  <p className="text-red-500 text-[11px] mt-1 font-semibold">
+                    ⚠️ Melebihi saldo sukarela (Maks: {formatRupiah(memberSavingsBreakdown.sukarela)})
+                  </p>
+                )}
               </div>
 
+              {/* Keterangan */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Keterangan / Berita Acara
                 </label>
                 <input
                   type="text"
-                  placeholder="Contoh: Setoran panen sawit / Simpanan wajib Maret"
+                  placeholder={transactionMode === "SETORAN" ? "Contoh: Setoran panen sawit / Wajib Maret" : "Contoh: Penarikan untuk biaya sekolah anak"}
                   value={depositNotes}
                   onChange={(e) => setDepositNotes(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  Simpan Transaksi & Terbitkan Kwitansi
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={transactionMode === "PENARIKAN" && (!selectedMember || depositAmount > memberSavingsBreakdown.sukarela || depositAmount <= 0)}
+                className={`w-full py-3 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 ${
+                  transactionMode === "SETORAN"
+                    ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                    : "bg-rose-600 hover:bg-rose-700 text-white disabled:bg-slate-300 disabled:cursor-not-allowed"
+                }`}
+              >
+                {transactionMode === "SETORAN" ? (
+                  <>
+                    <ArrowDownCircle className="w-4 h-4" />
+                    Bukukan Setoran & Cetak Kwitansi
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpCircle className="w-4 h-4" />
+                    Proses Penarikan Kas Tunai
+                  </>
+                )}
+              </button>
             </form>
           </div>
 
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-900 text-sm">Mutasi Setoran Simpanan Terbaru</h3>
-                <p className="text-xs text-slate-500">Rekap pemasukan kas koperasi dari simpanan warga.</p>
-              </div>
-              <span className="text-xs font-mono text-slate-500">{savings.length} Transaksi</span>
-            </div>
-
-            <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
-              {savings.slice(0, 10).map((s) => (
-                <div key={s.id} className="p-4 hover:bg-slate-50 flex items-center justify-between text-xs">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">{s.memberName}</span>
-                      <span className="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-700">
-                        {s.type}
-                      </span>
-                    </div>
-                    <div className="text-slate-500 text-[11px]">{s.notes || "Setoran simpanan"}</div>
-                    <div className="text-slate-400 text-[10px]">Petugas: {s.officerName}</div>
-                  </div>
-
-                  <div className="text-right space-y-1">
-                    <div className="font-extrabold text-emerald-600 text-sm">
-                      +{formatRupiah(s.amount)}
-                    </div>
-                    <div className="text-slate-400 text-[10px]">{formatDateIndo(s.date)}</div>
-                  </div>
+          {/* Kolom Kanan: Rekap Simpanan Warga */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Rekapitulasi Tabungan Warga</h3>
+                  <p className="text-xs text-slate-500">Monitoring saldo simpanan pokok, wajib, dan sukarela per anggota.</p>
                 </div>
-              ))}
+                <span className="text-xs font-mono text-slate-400">{members.length} Anggota</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Nama & Dusun</th>
+                      <th className="px-4 py-3">Simpanan Pokok</th>
+                      <th className="px-4 py-3">Total Saldo</th>
+                      <th className="px-4 py-3 text-right">Aksi Cepat</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {members.slice(0, 10).map((m) => (
+                      <tr key={m.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-slate-900">{m.name}</div>
+                          <div className="text-[11px] text-slate-400">{m.dusun} &bull; {m.nik}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {m.simpananPokokPaid ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              Lunas
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                              Belum Lunas
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 font-mono font-bold text-emerald-700">
+                          {formatRupiah(m.savingsTotal)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => {
+                              setSelectedMemberId(m.id);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[11px] transition-colors"
+                          >
+                            Pilih Loket
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 2: PENCAIRAN PINJAMAN */}
+      {/* TAB 2: PENCAIRAN PINJAMAN (DISBURSEMENT) */}
       {activeTab === "pencairan" && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">
-                  Daftar Pinjaman yang Disetujui (Menunggu Pencairan)
-                </h3>
+                <h3 className="font-bold text-slate-900 text-base">Pinjaman yang Siap Dicairkan</h3>
                 <p className="text-xs text-slate-500">
-                  Pinjaman ini telah lolos verifikasi Admin dan persetujuan Master/Kepala Desa.
+                  Daftar proposal pinjaman yang telah diverifikasi Admin & disetujui resmi oleh Master Koperasi.
                 </p>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg">
-                {approvedLoansReadyToDisburse.length} Siap Cair
+              <span className="text-xs font-mono font-bold bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full">
+                {approvedLoansReadyToDisburse.length} Siap Realisasi
               </span>
             </div>
 
@@ -537,57 +901,233 @@ function BendaharaDashboardContent() {
         </div>
       )}
 
-      {/* TAB 3: PEMBAYARAN ANGSURAN */}
+      {/* TAB 3: PEMBAYARAN ANGSURAN & PERINGATAN WA */}
       {activeTab === "angsuran" && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Jadwal Tagihan Angsuran Anggota</h3>
-                <p className="text-xs text-slate-500">Pencatatan pelunasan cicilan bulanan.</p>
+                <p className="text-xs text-slate-500">Pencatatan pelunasan cicilan bulanan dan mitigasi risiko keterlambatan.</p>
               </div>
-              <span className="text-xs font-mono text-slate-500">{pendingInstallments.length} Tagihan Aktif</span>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="px-3 py-1 rounded-full bg-slate-100 font-mono text-slate-600 font-bold">
+                  {pendingInstallments.length} Tagihan Aktif
+                </span>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
                   <tr>
-                    <th className="px-6 py-4">Anggota</th>
-                    <th className="px-6 py-4">No. Pinjaman & Cicilan</th>
-                    <th className="px-6 py-4">Jatuh Tempo</th>
-                    <th className="px-6 py-4">Pokok & Jasa</th>
-                    <th className="px-6 py-4">Total Tagihan</th>
-                    <th className="px-6 py-4 text-right">Aksi Loket</th>
+                    <th className="px-5 py-4">Anggota Warga</th>
+                    <th className="px-5 py-4">Cicilan & Pinjaman</th>
+                    <th className="px-5 py-4">Jatuh Tempo</th>
+                    <th className="px-5 py-4">Pokok & Jasa</th>
+                    <th className="px-5 py-4">Total Tagihan</th>
+                    <th className="px-5 py-4 text-right">Aksi Loket</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {pendingInstallments.map((ins) => (
-                    <tr key={ins.id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 font-bold text-slate-900">
-                        {ins.memberName}
+                  {pendingInstallments.map((ins) => {
+                    const isDueSoon = new Date(ins.dueDate).getTime() - Date.now() < 7 * 24 * 3600 * 1000;
+                    return (
+                      <tr key={ins.id} className="hover:bg-slate-50">
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-900">{ins.memberName}</div>
+                          <div className="text-[11px] text-slate-400 font-mono">{ins.loanId}</div>
+                        </td>
+                        <td className="px-5 py-4 font-semibold text-slate-700">
+                          Cicilan ke-{ins.installmentNo}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="font-medium text-slate-700">{formatDateIndo(ins.dueDate)}</div>
+                          {isDueSoon && (
+                            <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                              Mendekati Jatuh Tempo
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">
+                          <div>Pokok: {formatRupiah(ins.principalAmount)}</div>
+                          <div className="text-slate-400 text-[10px]">Jasa: {formatRupiah(ins.interestAmount)}</div>
+                        </td>
+                        <td className="px-5 py-4 font-extrabold text-slate-900 font-mono text-sm">
+                          {formatRupiah(ins.amount)}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Tombol Ingatkan via WhatsApp */}
+                            <button
+                              type="button"
+                              onClick={() => sendWaReminder(ins)}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[11px] transition-colors flex items-center gap-1"
+                              title="Kirim pesan pengingat tagihan ke nomor WhatsApp anggota"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              Ingatkan WA
+                            </button>
+
+                            {/* Tombol Terima Pembayaran */}
+                            <button
+                              onClick={() => handlePayInstallment(ins)}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm transition-colors flex items-center gap-1"
+                            >
+                              <DollarSign className="w-3.5 h-3.5" />
+                              Terima Bayar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: BUKU KAS UMUM (BKU) & REKONSILIASI KASIR HARIAN */}
+      {activeTab === "bku" && (
+        <div className="space-y-6">
+          {/* KARTU REKONSILIASI KAS HARIAN (DAILY CASH CLOSING) */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-extrabold text-slate-900 text-base">
+                    Rekonsiliasi Kas Harian (Daily Cash Closing)
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Rekapitulasi fisik kas brankas loket hari ini: <strong>{formatDateIndo(todayStr)}</strong>
+                </p>
+              </div>
+
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 transition-all self-start sm:self-auto"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Cetak Berita Acara Kasir
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                <span className="text-emerald-800 font-semibold block mb-1">Total Kas Masuk Hari Ini (+)</span>
+                <span className="text-xl font-black text-emerald-700 font-mono">{formatRupiah(todayIn)}</span>
+                <p className="text-[10px] text-emerald-600 mt-1">Setoran simpanan & pembayaran cicilan angsuran</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-rose-50/70 border border-rose-200">
+                <span className="text-rose-800 font-semibold block mb-1">Total Kas Keluar Hari Ini (-)</span>
+                <span className="text-xl font-black text-rose-700 font-mono">-{formatRupiah(todayOut)}</span>
+                <p className="text-[10px] text-rose-600 mt-1">Pencairan pinjaman & penarikan simpanan sukarela</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200">
+                <span className="text-indigo-800 font-semibold block mb-1">Net Cashflow Loket Hari Ini</span>
+                <span className={`text-xl font-black font-mono ${todayNet >= 0 ? "text-indigo-700" : "text-rose-700"}`}>
+                  {todayNet >= 0 ? `+${formatRupiah(todayNet)}` : `-${formatRupiah(Math.abs(todayNet))}`}
+                </span>
+                <p className="text-[10px] text-indigo-600 mt-1">Selisih mutasi kas fisik yang wajib ada di loket</p>
+              </div>
+            </div>
+          </div>
+
+          {/* TABEL BUKU KAS UMUM (BKU) */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Buku Kas Umum (BKU) Koperasi</h3>
+                <p className="text-xs text-slate-500">Seluruh pencatatan transaksi debet & kredit secara kronologis.</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Filter Type */}
+                <div className="flex rounded-xl bg-slate-100 p-1 text-xs">
+                  <button
+                    onClick={() => setBkuFilter("ALL")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      bkuFilter === "ALL" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
+                    }`}
+                  >
+                    Semua ({bkuTransactions.length})
+                  </button>
+                  <button
+                    onClick={() => setBkuFilter("IN")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      bkuFilter === "IN" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-600"
+                    }`}
+                  >
+                    Masuk (+)
+                  </button>
+                  <button
+                    onClick={() => setBkuFilter("OUT")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                      bkuFilter === "OUT" ? "bg-rose-600 text-white shadow-sm" : "text-slate-600"
+                    }`}
+                  >
+                    Keluar (-)
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Cari transaksi / anggota..."
+                    value={bkuSearch}
+                    onChange={(e) => setBkuSearch(e.target.value)}
+                    className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none w-48"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                  <tr>
+                    <th className="px-5 py-4">Tanggal & No. Bukti</th>
+                    <th className="px-5 py-4">Kategori & Anggota</th>
+                    <th className="px-5 py-4">Uraian / Keterangan</th>
+                    <th className="px-5 py-4 text-right">Kas Masuk (Debet)</th>
+                    <th className="px-5 py-4 text-right">Kas Keluar (Kredit)</th>
+                    <th className="px-5 py-4 text-right">Petugas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredBku.map((trx) => (
+                    <tr key={trx.id} className="hover:bg-slate-50">
+                      <td className="px-5 py-3.5">
+                        <div className="font-semibold text-slate-800">{formatDateIndo(trx.date)}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{trx.id}</div>
                       </td>
-                      <td className="px-6 py-4 font-medium text-slate-700">
-                        Cicilan ke-{ins.installmentNo}
-                        <div className="text-[10px] text-slate-400 font-mono">{ins.loanId}</div>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          trx.type === "IN" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                        }`}>
+                          {trx.category}
+                        </span>
+                        <div className="font-bold text-slate-900 mt-0.5">{trx.member}</div>
                       </td>
-                      <td className="px-6 py-4 text-slate-600 font-medium">
-                        {formatDateIndo(ins.dueDate)}
+                      <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">
+                        {trx.description}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        <div>Pokok: {formatRupiah(ins.principalAmount)}</div>
-                        <div className="text-slate-400 text-[10px]">Jasa: {formatRupiah(ins.interestAmount)}</div>
+                      <td className="px-5 py-3.5 text-right font-mono font-bold text-emerald-700">
+                        {trx.type === "IN" ? `+${formatRupiah(trx.amount)}` : "-"}
                       </td>
-                      <td className="px-6 py-4 font-extrabold text-slate-900">
-                        {formatRupiah(ins.amount)}
+                      <td className="px-5 py-3.5 text-right font-mono font-bold text-rose-700">
+                        {trx.type === "OUT" ? `-${formatRupiah(trx.amount)}` : "-"}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handlePayInstallment(ins)}
-                          className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] shadow-sm transition-colors"
-                        >
-                          Terima Pembayaran
-                        </button>
+                      <td className="px-5 py-3.5 text-right text-slate-500 font-mono text-[11px]">
+                        {trx.officer}
                       </td>
                     </tr>
                   ))}
@@ -598,43 +1138,27 @@ function BendaharaDashboardContent() {
         </div>
       )}
 
-      {/* TAB 4: MUTASI KAS */}
-      {activeTab === "mutasi" && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          <h3 className="font-bold text-slate-900 text-base">Arus Kas Masuk & Keluar Koperasi</h3>
-          <p className="text-xs text-slate-500">
-            Transparansi buku kas bendahara Desa Lubuk Ogung.
-          </p>
-
-          <div className="space-y-3">
-            {savings.map((s) => (
-              <div key={s.id} className="p-3.5 rounded-xl border border-slate-100 bg-slate-50 flex items-center justify-between text-xs">
-                <div>
-                  <div className="font-bold text-slate-800">[KAS MASUK] Simpanan {s.type} - {s.memberName}</div>
-                  <div className="text-slate-400 text-[11px]">{s.notes} &bull; Dicatat oleh {s.officerName}</div>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-emerald-600 text-sm">+{formatRupiah(s.amount)}</div>
-                  <div className="text-slate-400 text-[10px]">{formatDateIndo(s.date)}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* TAB 5: NERACA KEUANGAN (BENDAHARA) */}
+      {activeTab === "neraca" && (
+        <NeracaKeuangan userRole="BENDAHARA" />
       )}
 
-      {/* Modal Kwitansi Cetak */}
+      {/* Modal Kwitansi Cetak Resmi */}
       {receiptData && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 text-center space-y-4 border-b border-slate-100">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
+                receiptData.isWithdrawal ? "bg-rose-100 text-rose-600" : "bg-emerald-100 text-emerald-600"
+              }`}>
                 <RpReceipt className="w-6 h-6" />
               </div>
               <div>
                 <h4 className="font-extrabold text-slate-900 text-base">KOPERASI MERAH PUTIH</h4>
                 <p className="text-xs text-slate-500">Desa Lubuk Ogung, Kec. Bandar Sei Kijang, Pelalawan</p>
-                <div className="mt-2 text-xs font-bold text-emerald-800 bg-emerald-50 py-1 px-3 rounded-full inline-block">
+                <div className={`mt-2 text-xs font-bold py-1 px-3 rounded-full inline-block ${
+                  receiptData.isWithdrawal ? "bg-rose-100 text-rose-800" : "bg-emerald-50 text-emerald-800"
+                }`}>
                   {receiptData.title}
                 </div>
               </div>
@@ -645,25 +1169,39 @@ function BendaharaDashboardContent() {
                   <span className="font-bold text-slate-800">{receiptData.id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Penyetor / Penerima:</span>
+                  <span className="text-slate-400">Nama Warga:</span>
                   <span className="font-bold text-slate-800">{receiptData.name}</span>
                 </div>
+                {receiptData.nik && receiptData.nik !== "-" && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">NIK:</span>
+                    <span className="font-bold text-slate-800">{receiptData.nik}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Jenis:</span>
+                  <span className="text-slate-400">Jenis Transaksi:</span>
                   <span className="font-bold text-slate-800">{receiptData.type}</span>
                 </div>
+                {receiptData.note && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Keterangan:</span>
+                    <span className="font-medium text-slate-700">{receiptData.note}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Tanggal:</span>
+                  <span className="text-slate-400">Tanggal & Waktu:</span>
                   <span className="font-bold text-slate-800">{formatDateIndo(receiptData.date)}</span>
                 </div>
                 <div className="border-t border-slate-200 pt-2 flex justify-between text-sm font-bold">
-                  <span className="text-slate-700">Jumlah:</span>
-                  <span className="text-emerald-700">{formatRupiah(receiptData.amount)}</span>
+                  <span className="text-slate-700">Jumlah Kas:</span>
+                  <span className={receiptData.isWithdrawal ? "text-rose-700" : "text-emerald-700"}>
+                    {formatRupiah(receiptData.amount)}
+                  </span>
                 </div>
               </div>
 
               <div className="text-[11px] text-slate-400 italic">
-                Tanda terima sah diterbitkan secara digital oleh: {receiptData.officer}
+                Tanda terima sah diverifikasi secara resmi oleh Bendahara: {receiptData.officer}
               </div>
             </div>
 
@@ -673,7 +1211,7 @@ function BendaharaDashboardContent() {
                 className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5"
               >
                 <Printer className="w-3.5 h-3.5" />
-                Cetak Dokumen
+                Cetak Kwitansi PDF
               </button>
               <button
                 onClick={() => setReceiptData(null)}
@@ -705,7 +1243,7 @@ function BendaharaDashboardContent() {
 
 export default function BendaharaDashboard() {
   return (
-    <ProtectedRoute allowedRoles={["BENDAHARA", "MANAGER"]}>
+    <ProtectedRoute allowedRoles={["BENDAHARA", "MANAGER", "MASTER"]}>
       <BendaharaDashboardContent />
     </ProtectedRoute>
   );

@@ -184,8 +184,12 @@ export const DataStore = {
     const members = this.getMembers();
     const member = members.find((m) => m.id === trx.memberId);
     if (member) {
-      member.savingsTotal += trx.amount;
-      if (trx.type === "POKOK") member.simpananPokokPaid = true;
+      if (trx.type === "PENARIKAN_SUKARELA") {
+        member.savingsTotal = Math.max(0, member.savingsTotal - Math.abs(trx.amount));
+      } else {
+        member.savingsTotal += trx.amount;
+        if (trx.type === "POKOK") member.simpananPokokPaid = true;
+      }
       setToStorage(STORAGE_KEYS.MEMBERS, members);
       pushToCloud("members", members);
     }

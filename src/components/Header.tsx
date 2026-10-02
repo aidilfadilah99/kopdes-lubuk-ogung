@@ -80,7 +80,10 @@ export default function Header() {
           ? [{ href: "/admin", label: "Dashboard Admin", icon: Users }]
           : []),
         ...(currentUser.role === "BENDAHARA"
-          ? [{ href: "/bendahara", label: "Loket Keuangan", icon: Wallet }]
+          ? [
+              { href: "/bendahara", label: "Loket Keuangan", icon: Wallet },
+              { href: "/bendahara?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
+            ]
           : []),
         ...(currentUser.role === "ANGGOTA"
           ? [{ href: "/anggota", label: "Portal Saya", icon: User }]

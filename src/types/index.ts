@@ -31,7 +31,7 @@ export interface Member {
   simpananPokokPaid: boolean;
 }
 
-export type SavingsType = 'POKOK' | 'WAJIB' | 'SUKARELA';
+export type SavingsType = 'POKOK' | 'WAJIB' | 'SUKARELA' | 'PENARIKAN_SUKARELA';
 
 export interface SavingsTransaction {
   id: string;
