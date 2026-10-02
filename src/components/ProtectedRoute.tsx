@@ -25,6 +25,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         ADMIN: "/admin",
         BENDAHARA: "/bendahara",
         ANGGOTA: "/anggota",
+        KASIR: "/toko",
+        GUDANG: "/toko",
       };
       router.replace(roleMap[currentUser.role]);
     }

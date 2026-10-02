@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { DataStore } from "@/lib/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MartReceiptModal } from "@/components/MartReceiptModal";
+import { TransactionValidationModal } from "@/components/TransactionValidationModal";
 import {
   Product,
   ProductCategory,
@@ -12,6 +13,7 @@ import {
   Member,
   PaymentMethod,
   SaleTransaction,
+  CooperativeConfig,
 } from "@/types";
 import { formatRupiah } from "@/lib/utils";
 import {
@@ -38,11 +40,12 @@ import {
   UtensilsCrossed,
   Sparkles,
   CupSoda,
-  Home,
   Sprout,
-  RefreshCw,
   Edit2,
   X,
+  Settings,
+  Percent,
+  ShieldAlert,
 } from "lucide-react";
 
 const CATEGORIES: { key: ProductCategory | "ALL"; label: string; icon: any }[] = [
@@ -57,15 +60,29 @@ const CATEGORIES: { key: ProductCategory | "ALL"; label: string; icon: any }[] =
 
 function TokoPageContent() {
   const { currentUser } = useAuth();
-  const isStaff = currentUser && currentUser.role !== "ANGGOTA";
 
-  const [activeTab, setActiveTab] = useState<"pos" | "inventory" | "sales">(
-    isStaff ? "pos" : "inventory"
-  );
+  // Role permissions
+  const isMasterOrManager = currentUser?.role === "MASTER" || currentUser?.role === "MANAGER";
+  const isKasirOnly = currentUser?.role === "KASIR";
+  const isGudangOnly = currentUser?.role === "GUDANG";
+  const isAnggota = currentUser?.role === "ANGGOTA";
+
+  const canAccessPos = isMasterOrManager || currentUser?.role === "ADMIN" || currentUser?.role === "BENDAHARA" || isKasirOnly;
+  const canAccessInventory = isMasterOrManager || currentUser?.role === "ADMIN" || currentUser?.role === "BENDAHARA" || isGudangOnly || isAnggota;
+  const canModifyInventory = isMasterOrManager || currentUser?.role === "ADMIN" || currentUser?.role === "BENDAHARA" || isGudangOnly;
+  const canAccessSalesHistory = isMasterOrManager || currentUser?.role === "ADMIN" || currentUser?.role === "BENDAHARA" || isKasirOnly;
+  const canChangeDiscount = isMasterOrManager; // HANYA MASTER DAN MANAGER!
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"pos" | "inventory" | "sales">(() => {
+    if (isGudangOnly || isAnggota) return "inventory";
+    return "pos";
+  });
 
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<SaleTransaction[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [config, setConfig] = useState<CooperativeConfig | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | "ALL">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [notification, setNotification] = useState<string | null>(null);
@@ -78,12 +95,19 @@ function TokoPageContent() {
   const [cashGiven, setCashGiven] = useState<number>(0);
   const [transactionNotes, setTransactionNotes] = useState("");
 
+  // Validation Modal State (Anti Human Error)
+  const [validationCandidate, setValidationCandidate] = useState<SaleTransaction | null>(null);
+
   // Last Receipt Modal
   const [activeReceipt, setActiveReceipt] = useState<SaleTransaction | null>(null);
 
   // Restock Modal State
   const [restockTarget, setRestockTarget] = useState<Product | null>(null);
   const [restockQty, setRestockQty] = useState<number>(10);
+
+  // Member Discount Setting Modal (HANYA MASTER & MANAGER)
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [tempDiscountPercent, setTempDiscountPercent] = useState<number>(2.5);
 
   // Add/Edit Product Modal State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -105,6 +129,9 @@ function TokoPageContent() {
     setProducts(DataStore.getProducts());
     setSales(DataStore.getSales());
     setMembers(DataStore.getMembers());
+    const c = DataStore.getConfig();
+    setConfig(c);
+    setTempDiscountPercent(c.martMemberDiscountPercent ?? 2.5);
   };
 
   useEffect(() => {
@@ -118,19 +145,28 @@ function TokoPageContent() {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  const memberDiscountPercent = config?.martMemberDiscountPercent ?? 2.5;
+
   const selectedMember = useMemo(() => {
     return members.find((m) => m.id === selectedMemberId);
   }, [members, selectedMemberId]);
 
   // Set default member if current user is ANGGOTA
   useEffect(() => {
-    if (currentUser?.role === "ANGGOTA") {
+    if (isAnggota) {
       setBuyerType("ANGGOTA");
-      if (currentUser.memberId) {
+      if (currentUser?.memberId) {
         setSelectedMemberId(currentUser.memberId);
       }
     }
-  }, [currentUser]);
+  }, [isAnggota, currentUser]);
+
+  // Helper calculate member price from general price and discount percent
+  const getProductMemberPrice = (p: Product) => {
+    if (p.priceMember && p.priceMember > 0) return p.priceMember;
+    const discounted = p.priceGeneral * (1 - memberDiscountPercent / 100);
+    return Math.round(discounted);
+  };
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -157,17 +193,17 @@ function TokoPageContent() {
       totalItems += item.qty;
       const unitPrice =
         buyerType === "ANGGOTA"
-          ? item.product.priceMember
+          ? getProductMemberPrice(item.product)
           : item.product.priceGeneral;
       const regularPrice = item.product.priceGeneral;
       totalAmount += unitPrice * item.qty;
       totalCost += item.product.costPrice * item.qty;
-      totalDiscount += (regularPrice - unitPrice) * item.qty;
+      totalDiscount += Math.max(0, (regularPrice - unitPrice) * item.qty);
     });
 
     const change = Math.max(0, cashGiven - totalAmount);
     return { totalItems, totalAmount, totalCost, totalDiscount, change };
-  }, [cart, buyerType, cashGiven]);
+  }, [cart, buyerType, cashGiven, memberDiscountPercent]);
 
   // POS Cart Handlers
   const handleAddToCart = (product: Product) => {
@@ -179,7 +215,9 @@ function TokoPageContent() {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       const unitPrice =
-        buyerType === "ANGGOTA" ? product.priceMember : product.priceGeneral;
+        buyerType === "ANGGOTA"
+          ? getProductMemberPrice(product)
+          : product.priceGeneral;
 
       if (existing) {
         if (existing.qty >= product.stock) {
@@ -223,7 +261,7 @@ function TokoPageContent() {
           }
           const unitPrice =
             buyerType === "ANGGOTA"
-              ? item.product.priceMember
+              ? getProductMemberPrice(item.product)
               : item.product.priceGeneral;
           return {
             ...item,
@@ -244,8 +282,8 @@ function TokoPageContent() {
     setCashGiven(0);
   };
 
-  // Submit Transaction
-  const handleCheckout = () => {
+  // STEP 1: REVIEW & BUKA MODAL VALIDASI TRANSAKSI (MENCEGAH HUMAN ERROR)
+  const handleInitiateCheckout = () => {
     if (cart.length === 0) {
       notify("Keranjang belanja masih kosong!");
       return;
@@ -281,7 +319,7 @@ function TokoPageContent() {
     const dateFormatted = now.toISOString().slice(0, 10).replace(/-/g, "");
     const invoiceNo = `INV-KOP-${dateFormatted}-${Math.floor(100 + Math.random() * 900)}`;
 
-    const saleRecord: SaleTransaction = {
+    const candidate: SaleTransaction = {
       id: `sale-${Date.now()}`,
       invoiceNo,
       date: dateStr,
@@ -289,38 +327,50 @@ function TokoPageContent() {
       memberId: buyerType === "ANGGOTA" ? selectedMember?.id : undefined,
       memberName: buyerType === "ANGGOTA" ? selectedMember?.name : undefined,
       memberNik: buyerType === "ANGGOTA" ? selectedMember?.nik : undefined,
-      items: cart.map((item) => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        sku: item.product.sku,
-        qty: item.qty,
-        unit: item.product.unit,
-        costPrice: item.product.costPrice,
-        pricePerUnit:
+      items: cart.map((item) => {
+        const pPrice =
           buyerType === "ANGGOTA"
-            ? item.product.priceMember
-            : item.product.priceGeneral,
-        subtotal: item.subtotal,
-      })),
+            ? getProductMemberPrice(item.product)
+            : item.product.priceGeneral;
+        return {
+          productId: item.product.id,
+          productName: item.product.name,
+          sku: item.product.sku,
+          qty: item.qty,
+          unit: item.product.unit,
+          costPrice: item.product.costPrice,
+          pricePerUnit: pPrice,
+          subtotal: pPrice * item.qty,
+        };
+      }),
       totalItems: cartSummary.totalItems,
       totalCost: cartSummary.totalCost,
       totalAmount: cartSummary.totalAmount,
       totalDiscount: cartSummary.totalDiscount,
       cashierName: currentUser?.name || "Petugas Kasir",
-      cashierRole: currentUser?.role || "BENDAHARA",
+      cashierRole: currentUser?.role || "KASIR",
       paymentMethod,
       amountPaid: paymentMethod === "TUNAI" ? cashGiven : cartSummary.totalAmount,
       changeAmount: paymentMethod === "TUNAI" ? cartSummary.change : 0,
       notes: transactionNotes,
     };
 
-    DataStore.recordSale(saleRecord);
+    // Buka modal validasi terlebih dahulu agar kasir bisa memverifikasi
+    setValidationCandidate(candidate);
+  };
+
+  // STEP 2: KONFIRMASI FINAL SETELAH VALIDASI SELESAI
+  const handleConfirmCheckout = () => {
+    if (!validationCandidate) return;
+
+    DataStore.recordSale(validationCandidate);
     refreshData();
-    setActiveReceipt(saleRecord);
+    setActiveReceipt(validationCandidate);
+    setValidationCandidate(null);
     setCart([]);
     setCashGiven(0);
     setTransactionNotes("");
-    notify(`Transaksi ${invoiceNo} berhasil disimpan!`);
+    notify(`Transaksi ${validationCandidate.invoiceNo} berhasil diverifikasi & disimpan!`);
   };
 
   // Restock Handler
@@ -334,13 +384,54 @@ function TokoPageContent() {
     setRestockTarget(null);
   };
 
+  // Setting Diskon Anggota Submit (HANYA MASTER & MANAGER)
+  const handleSaveDiscount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isMasterOrManager) {
+      notify("Hanya Master dan Manager yang berwenang mengubah diskon anggota!");
+      return;
+    }
+
+    const newDiscount = Math.max(0, Math.min(50, tempDiscountPercent));
+    DataStore.updateConfig({ martMemberDiscountPercent: newDiscount });
+
+    // Update semua harga anggota produk berdasarkan persentase baru
+    const currentProducts = DataStore.getProducts();
+    const updatedProducts = currentProducts.map((p) => ({
+      ...p,
+      priceMember: Math.round(p.priceGeneral * (1 - newDiscount / 100)),
+    }));
+    updatedProducts.forEach((p) => DataStore.saveProduct(p));
+
+    DataStore.addAuditLog(
+      "UPDATE_DISKON_MART",
+      `Master/Manager mengubah potongan belanja anggota menjadi ${newDiscount}%`,
+      { id: currentUser!.id, name: currentUser!.name, role: currentUser!.role }
+    );
+
+    refreshData();
+    setIsDiscountModalOpen(false);
+    notify(`Potongan anggota berhasil diset menjadi ${newDiscount}% dari harga jual!`);
+  };
+
   // Add / Edit Product Submit
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canModifyInventory) {
+      notify("Anda tidak memiliki izin mengubah data gudang/produk!");
+      return;
+    }
     if (!productForm.name || !productForm.sku) {
       notify("Nama produk dan SKU wajib diisi!");
       return;
     }
+
+    const generalPrice = Number(productForm.priceGeneral) || 0;
+    // Hitung otomatis harga anggota dari persentase diskon
+    const memberPrice =
+      Number(productForm.priceMember) > 0
+        ? Number(productForm.priceMember)
+        : Math.round(generalPrice * (1 - memberDiscountPercent / 100));
 
     const newProd: Product = {
       id: editingProduct?.id || `prd-${Date.now()}`,
@@ -349,8 +440,8 @@ function TokoPageContent() {
       category: (productForm.category as ProductCategory) || "SEMBAKO",
       unit: productForm.unit || "pcs",
       costPrice: Number(productForm.costPrice) || 0,
-      priceMember: Number(productForm.priceMember) || 0,
-      priceGeneral: Number(productForm.priceGeneral) || 0,
+      priceMember: memberPrice,
+      priceGeneral: generalPrice,
       stock: Number(productForm.stock) || 0,
       minStock: Number(productForm.minStock) || 5,
       barcode: productForm.barcode,
@@ -361,7 +452,7 @@ function TokoPageContent() {
     refreshData();
     setIsProductModalOpen(false);
     setEditingProduct(null);
-    notify(`Produk ${newProd.name} berhasil disimpan!`);
+    notify(`Produk ${newProd.name} berhasil disimpan di gudang!`);
   };
 
   const openAddProductModal = () => {
@@ -413,38 +504,62 @@ function TokoPageContent() {
         <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-xs font-semibold uppercase tracking-wider backdrop-blur-sm border border-emerald-400/20">
-              <Store className="w-3.5 h-3.5" />
-              <span>Unit Usaha Toko Sembako & Kebutuhan Harian</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 text-xs font-semibold uppercase tracking-wider backdrop-blur-sm border border-emerald-400/20">
+                <Store className="w-3.5 h-3.5" />
+                <span>Unit Toko & Sembako Desa</span>
+              </span>
+
+              {/* Badge Potongan Anggota */}
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/20 text-amber-200 text-xs font-semibold backdrop-blur-sm border border-amber-400/30">
+                <Percent className="w-3 h-3 text-amber-300" />
+                <span>Diskon Anggota: {memberDiscountPercent}%</span>
+              </span>
             </div>
+
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Kopdes Mart Lubuk Ogung 🛒
             </h1>
             <p className="text-slate-300 text-sm max-w-2xl leading-relaxed">
-              Minimarket desa penyedia kebutuhan harian warga dan sembako berkualitas dengan harga khusus anggota koperasi. Belanja di Kopdes Mart memperkuat ekonomi desa dan menambah alokasi SHU anggota!
+              Sistem kasir POS dan manajemen persediaan barang kebutuhan harian warga. Transaksi diverifikasi secara aman untuk mencegah kesalahan input.
             </p>
           </div>
 
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 gap-3 shrink-0">
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
-              <span className="text-xs text-slate-300 block">Total Omset Mart</span>
-              <span className="text-lg font-black text-emerald-300">
-                {formatRupiah(salesMetrics.totalOmset)}
-              </span>
-            </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
-              <span className="text-xs text-slate-300 block">Laba Bersih Mart</span>
-              <span className="text-lg font-black text-amber-300">
-                {formatRupiah(salesMetrics.totalLaba)}
-              </span>
+          {/* Quick Metrics & Setting Diskon Button */}
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3">
+            {/* Tombol Khusus Master & Manager: Setting Diskon % */}
+            {canChangeDiscount && (
+              <button
+                onClick={() => setIsDiscountModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 text-xs font-bold transition-all shadow-sm backdrop-blur-sm"
+                title="Khusus Master & Manager"
+              >
+                <Settings className="w-4 h-4 text-amber-300" />
+                <span>Atur Diskon Anggota ({memberDiscountPercent}%)</span>
+              </button>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 shrink-0">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
+                <span className="text-xs text-slate-300 block">Total Omset</span>
+                <span className="text-lg font-black text-emerald-300">
+                  {formatRupiah(salesMetrics.totalOmset)}
+                </span>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
+                <span className="text-xs text-slate-300 block">Laba Toko</span>
+                <span className="text-lg font-black text-amber-300">
+                  {formatRupiah(salesMetrics.totalLaba)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation (Disesuaikan berdasarkan hak akses Role) */}
         <div className="mt-8 flex flex-wrap gap-2 border-t border-white/10 pt-4">
-          {isStaff && (
+          {/* Tab Kasir: Bisa diakses Kasir, Bendahara, Admin, Manager, Master (TIDAK untuk Gudang & Anggota) */}
+          {canAccessPos && (
             <button
               onClick={() => setActiveTab("pos")}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -463,19 +578,25 @@ function TokoPageContent() {
             </button>
           )}
 
-          <button
-            onClick={() => setActiveTab("inventory")}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              activeTab === "inventory"
-                ? "bg-white text-emerald-900 shadow-md font-bold"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>Katalog & Stok ({products.length})</span>
-          </button>
+          {/* Tab Gudang / Stok: Bisa diakses Gudang, Admin, Bendahara, Manager, Master, Anggota (Katalog) */}
+          {canAccessInventory && (
+            <button
+              onClick={() => setActiveTab("inventory")}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeTab === "inventory"
+                  ? "bg-white text-emerald-900 shadow-md font-bold"
+                  : "bg-white/10 text-white hover:bg-white/20"
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>
+                {isGudangOnly ? "Gudang & Stok Barang" : isAnggota ? "Katalog Harga" : "Katalog & Gudang"} ({products.length})
+              </span>
+            </button>
+          )}
 
-          {isStaff && (
+          {/* Tab Riwayat Penjualan: Bisa diakses Kasir, Bendahara, Admin, Manager, Master */}
+          {canAccessSalesHistory && (
             <button
               onClick={() => setActiveTab("sales")}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
@@ -492,7 +613,7 @@ function TokoPageContent() {
       </div>
 
       {/* TAB 1: KASIR / POINT OF SALE (POS) */}
-      {activeTab === "pos" && isStaff && (
+      {activeTab === "pos" && canAccessPos && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* SISI KIRI: Katalog Barang Kasir */}
           <div className="lg:col-span-7 space-y-4">
@@ -537,8 +658,8 @@ function TokoPageContent() {
               {filteredProducts.map((p) => {
                 const isOutOfStock = p.stock <= 0;
                 const isLow = p.stock > 0 && p.stock <= p.minStock;
-                const price =
-                  buyerType === "ANGGOTA" ? p.priceMember : p.priceGeneral;
+                const memberPrice = getProductMemberPrice(p);
+                const currentPrice = buyerType === "ANGGOTA" ? memberPrice : p.priceGeneral;
 
                 return (
                   <div
@@ -584,7 +705,7 @@ function TokoPageContent() {
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                       <div>
                         <span className="text-xs font-bold text-emerald-700 block">
-                          {formatRupiah(price)}
+                          {formatRupiah(currentPrice)}
                         </span>
                         {buyerType === "ANGGOTA" && (
                           <span className="text-[10px] text-slate-400 line-through">
@@ -628,9 +749,12 @@ function TokoPageContent() {
 
             {/* Pilihan Tipe Pembeli (Anggota / Umum) */}
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-2">
-              <span className="text-xs font-bold text-slate-700 block">
-                Status Pembeli:
-              </span>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-700">Status Pembeli:</span>
+                <span className="text-[11px] text-emerald-700 font-semibold">
+                  Diskon Anggota: {memberDiscountPercent}%
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -642,7 +766,7 @@ function TokoPageContent() {
                   }`}
                 >
                   <UserCheck className="w-4 h-4" />
-                  <span>Anggota (Diskon)</span>
+                  <span>Anggota (-{memberDiscountPercent}%)</span>
                 </button>
                 <button
                   type="button"
@@ -681,7 +805,7 @@ function TokoPageContent() {
 
                   {selectedMember && (
                     <div className="mt-2 p-2 bg-emerald-50 rounded-xl text-[11px] text-emerald-800 flex justify-between items-center">
-                      <span>Saldo Simpanan:</span>
+                      <span>Saldo Tabungan:</span>
                       <span className="font-bold">
                         {formatRupiah(selectedMember.savingsTotal)}
                       </span>
@@ -705,7 +829,7 @@ function TokoPageContent() {
                 cart.map((item) => {
                   const unitPrice =
                     buyerType === "ANGGOTA"
-                      ? item.product.priceMember
+                      ? getProductMemberPrice(item.product)
                       : item.product.priceGeneral;
 
                   return (
@@ -743,8 +867,8 @@ function TokoPageContent() {
 
                       {/* Subtotal */}
                       <div className="text-right shrink-0 min-w-16">
-                        <span className="font-bold text-slate-900 block">
-                          {formatRupiah(item.subtotal)}
+                        <span className="font-bold text-slate-900 block font-mono">
+                          {formatRupiah(unitPrice * item.qty)}
                         </span>
                         <button
                           onClick={() => handleRemoveFromCart(item.product.id)}
@@ -886,7 +1010,7 @@ function TokoPageContent() {
             <div className="pt-2 border-t border-slate-200 space-y-1.5">
               {cartSummary.totalDiscount > 0 && (
                 <div className="flex justify-between text-xs text-emerald-700 bg-emerald-50 p-2 rounded-xl font-medium">
-                  <span>Hemat Diskon Anggota:</span>
+                  <span>Hemat Diskon Anggota ({memberDiscountPercent}%):</span>
                   <span className="font-bold">
                     - {formatRupiah(cartSummary.totalDiscount)}
                   </span>
@@ -902,22 +1026,22 @@ function TokoPageContent() {
               </div>
             </div>
 
-            {/* Tombol Bayar */}
+            {/* Tombol Verifikasi & Bayar */}
             <button
               type="button"
-              onClick={handleCheckout}
+              onClick={handleInitiateCheckout}
               disabled={cart.length === 0}
               className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all"
             >
               <CheckCircle className="w-5 h-5" />
-              <span>Selesaikan Belanja & Cetak Struk</span>
+              <span>Verifikasi Belanja & Cetak Struk</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* TAB 2: KATALOG & MANAJEMEN STOK (INVENTORY) */}
-      {activeTab === "inventory" && (
+      {/* TAB 2: KATALOG & MANAJEMEN GUDANG/STOK (INVENTORY) */}
+      {activeTab === "inventory" && canAccessInventory && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-3">
@@ -947,13 +1071,13 @@ function TokoPageContent() {
               </select>
             </div>
 
-            {isStaff && (
+            {canModifyInventory && (
               <button
                 onClick={openAddProductModal}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>Tambah Produk Baru</span>
+                <span>Tambah Produk Gudang</span>
               </button>
             )}
           </div>
@@ -968,17 +1092,20 @@ function TokoPageContent() {
                     <th className="py-3 px-4">Nama Produk</th>
                     <th className="py-3 px-4">Kategori</th>
                     <th className="py-3 px-4">Kemasan</th>
-                    {isStaff && <th className="py-3 px-4">Harga Beli (HPP)</th>}
-                    <th className="py-3 px-4 text-emerald-700">Harga Anggota</th>
+                    {canModifyInventory && <th className="py-3 px-4">Harga Beli (HPP)</th>}
+                    <th className="py-3 px-4 text-emerald-700">
+                      Harga Anggota (-{memberDiscountPercent}%)
+                    </th>
                     <th className="py-3 px-4">Harga Umum</th>
-                    <th className="py-3 px-4 text-center">Stok</th>
-                    {isStaff && <th className="py-3 px-4 text-right">Aksi</th>}
+                    <th className="py-3 px-4 text-center">Stok Gudang</th>
+                    {canModifyInventory && <th className="py-3 px-4 text-right">Aksi</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredProducts.map((p) => {
                     const isOutOfStock = p.stock <= 0;
                     const isLow = p.stock > 0 && p.stock <= p.minStock;
+                    const memberPrice = getProductMemberPrice(p);
 
                     return (
                       <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
@@ -994,13 +1121,13 @@ function TokoPageContent() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-slate-500">{p.unit}</td>
-                        {isStaff && (
+                        {canModifyInventory && (
                           <td className="py-3 px-4 font-mono text-slate-500">
                             {formatRupiah(p.costPrice)}
                           </td>
                         )}
                         <td className="py-3 px-4 font-mono font-bold text-emerald-700 bg-emerald-50/40">
-                          {formatRupiah(p.priceMember)}
+                          {formatRupiah(memberPrice)}
                         </td>
                         <td className="py-3 px-4 font-mono text-slate-700">
                           {formatRupiah(p.priceGeneral)}
@@ -1020,7 +1147,7 @@ function TokoPageContent() {
                             </span>
                           )}
                         </td>
-                        {isStaff && (
+                        {canModifyInventory && (
                           <td className="py-3 px-4 text-right space-x-2">
                             <button
                               onClick={() => {
@@ -1052,7 +1179,7 @@ function TokoPageContent() {
       )}
 
       {/* TAB 3: RIWAYAT PENJUALAN & LABA MART */}
-      {activeTab === "sales" && isStaff && (
+      {activeTab === "sales" && canAccessSalesHistory && (
         <div className="space-y-4">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -1061,7 +1188,7 @@ function TokoPageContent() {
               <span className="text-2xl font-black text-slate-900 mt-1 block">
                 {salesMetrics.totalCount}
               </span>
-              <span className="text-[11px] text-slate-400">Nota penjualan keluar</span>
+              <span className="text-[11px] text-slate-400">Nota penjualan kasir</span>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <span className="text-xs text-slate-500 block">Total Omset Penjualan</span>
@@ -1069,7 +1196,7 @@ function TokoPageContent() {
                 {formatRupiah(salesMetrics.totalOmset)}
               </span>
               <span className="text-[11px] text-emerald-700 font-medium">
-                Penerimaan kas kotor mart
+                Penerimaan kotor mart
               </span>
             </div>
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -1159,13 +1286,94 @@ function TokoPageContent() {
         </div>
       )}
 
+      {/* MODAL SETTING DISKON ANGGOTA (%) - HANYA MASTER DAN MANAGER */}
+      {isDiscountModalOpen && canChangeDiscount && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-5 border border-slate-200 animate-in zoom-in-95">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
+                <Percent className="w-5 h-5 text-emerald-600" />
+                <h3>Atur Potongan Diskon Anggota</h3>
+              </div>
+              <button
+                onClick={() => setIsDiscountModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 space-y-1">
+              <div className="flex items-center gap-1.5 font-bold">
+                <ShieldAlert className="w-4 h-4 text-amber-600" />
+                <span>Otoritas Khusus Master & Manager</span>
+              </div>
+              <p className="leading-relaxed">
+                Persentase ini menjadi diskon resmi bagi setiap anggota koperasi yang berbelanja di Kopdes Mart. Perubahan persentase ini akan otomatis mengupdate harga seluruh produk.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveDiscount} className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1.5">
+                  Persentase Potongan Belanja Anggota (%):
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="50"
+                    required
+                    value={tempDiscountPercent}
+                    onChange={(e) => setTempDiscountPercent(parseFloat(e.target.value) || 0)}
+                    className="w-full text-base font-bold font-mono py-2.5 pl-3.5 pr-8 rounded-xl border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-emerald-800"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">
+                    %
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Contoh: Jika diset <strong>{tempDiscountPercent}%</strong>, barang umum Rp 100.000 menjadi Rp{" "}
+                  {Math.round(100000 * (1 - tempDiscountPercent / 100)).toLocaleString("id-ID")} untuk anggota.
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsDiscountModalOpen(false)}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 text-slate-700 font-semibold hover:bg-slate-200"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-md"
+                >
+                  Simpan Persentase
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL VALIDASI & VERIFIKASI TRANSAKSI (MENCEGAH HUMAN ERROR) */}
+      <TransactionValidationModal
+        candidate={validationCandidate}
+        onCancel={() => setValidationCandidate(null)}
+        onConfirm={handleConfirmCheckout}
+        memberRemainingSavings={selectedMember?.savingsTotal}
+      />
+
       {/* Modal Restock Produk */}
-      {restockTarget && (
+      {restockTarget && canModifyInventory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-slate-900 text-base">
-                Restock Produk Kulakan
+                Restock Produk Gudang
               </h3>
               <button
                 onClick={() => setRestockTarget(null)}
@@ -1216,13 +1424,13 @@ function TokoPageContent() {
         </div>
       )}
 
-      {/* Modal Tambah / Edit Produk */}
-      {isProductModalOpen && (
+      {/* Modal Tambah / Edit Produk Gudang */}
+      {isProductModalOpen && canModifyInventory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-base">
-                {editingProduct ? "Edit Informasi Produk" : "Tambah Produk Baru Kopdes Mart"}
+                {editingProduct ? "Edit Informasi Produk" : "Tambah Produk Baru Gudang"}
               </h3>
               <button
                 onClick={() => setIsProductModalOpen(false)}
@@ -1356,23 +1564,6 @@ function TokoPageContent() {
                   />
                 </div>
                 <div>
-                  <label className="font-semibold text-emerald-700 block mb-1">
-                    Harga Anggota (Diskon)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={productForm.priceMember}
-                    onChange={(e) =>
-                      setProductForm({
-                        ...productForm,
-                        priceMember: Number(e.target.value),
-                      })
-                    }
-                    className="w-full py-2 px-3 rounded-xl border border-emerald-300 font-mono font-bold text-emerald-800 bg-emerald-50/50"
-                  />
-                </div>
-                <div>
                   <label className="font-semibold text-slate-700 block mb-1">
                     Harga Umum
                   </label>
@@ -1380,13 +1571,36 @@ function TokoPageContent() {
                     type="number"
                     min="0"
                     value={productForm.priceGeneral}
+                    onChange={(e) => {
+                      const gen = Number(e.target.value);
+                      const mem = Math.round(gen * (1 - memberDiscountPercent / 100));
+                      setProductForm({
+                        ...productForm,
+                        priceGeneral: gen,
+                        priceMember: mem,
+                      });
+                    }}
+                    className="w-full py-2 px-3 rounded-xl border border-slate-300 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-emerald-700 block mb-1">
+                    Harga Anggota (-{memberDiscountPercent}%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={
+                      productForm.priceMember ||
+                      Math.round((productForm.priceGeneral || 0) * (1 - memberDiscountPercent / 100))
+                    }
                     onChange={(e) =>
                       setProductForm({
                         ...productForm,
-                        priceGeneral: Number(e.target.value),
+                        priceMember: Number(e.target.value),
                       })
                     }
-                    className="w-full py-2 px-3 rounded-xl border border-slate-300 font-mono"
+                    className="w-full py-2 px-3 rounded-xl border border-emerald-300 font-mono font-bold text-emerald-800 bg-emerald-50/50"
                   />
                 </div>
               </div>
@@ -1422,7 +1636,7 @@ function TokoPageContent() {
 
 export default function TokoPage() {
   return (
-    <ProtectedRoute allowedRoles={["MASTER", "MANAGER", "ADMIN", "BENDAHARA", "ANGGOTA"]}>
+    <ProtectedRoute allowedRoles={["MASTER", "MANAGER", "ADMIN", "BENDAHARA", "ANGGOTA", "KASIR", "GUDANG"]}>
       <TokoPageContent />
     </ProtectedRoute>
   );

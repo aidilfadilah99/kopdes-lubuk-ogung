@@ -64,6 +64,16 @@ export function getRoleBadge(role: UserRole) {
         label: "Warga / Anggota",
         className: "bg-amber-100 text-amber-800 border-amber-200",
       };
+    case "KASIR":
+      return {
+        label: "Kasir Kopdes Mart",
+        className: "bg-teal-100 text-teal-800 border-teal-200",
+      };
+    case "GUDANG":
+      return {
+        label: "Petugas Gudang / Stok",
+        className: "bg-orange-100 text-orange-800 border-orange-200",
+      };
     default:
       return {
         label: role,

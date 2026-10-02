@@ -28,6 +28,8 @@ const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Admin",
   BENDAHARA: "Bendahara",
   ANGGOTA: "Anggota",
+  KASIR: "Kasir Mart",
+  GUDANG: "Gudang Mart",
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -36,6 +38,8 @@ const ROLE_COLORS: Record<string, string> = {
   ADMIN: "bg-blue-100 text-blue-800",
   BENDAHARA: "bg-green-100 text-green-800",
   ANGGOTA: "bg-yellow-100 text-yellow-800",
+  KASIR: "bg-teal-100 text-teal-800",
+  GUDANG: "bg-orange-100 text-orange-800",
 };
 
 export default function Header() {
@@ -76,7 +80,15 @@ export default function Header() {
         ...(currentUser.role === "ANGGOTA"
           ? [{ href: "/anggota", label: "Portal Saya", icon: User }]
           : []),
-        { href: "/toko", label: "Kopdes Mart", icon: Store },
+        ...(currentUser.role === "KASIR"
+          ? [{ href: "/toko", label: "Kasir Toko (POS)", icon: Store }]
+          : []),
+        ...(currentUser.role === "GUDANG"
+          ? [{ href: "/toko", label: "Gudang & Stok", icon: Store }]
+          : []),
+        ...(currentUser.role !== "KASIR" && currentUser.role !== "GUDANG"
+          ? [{ href: "/toko", label: "Kopdes Mart", icon: Store }]
+          : []),
         { href: "/transparansi", label: "Transparansi", icon: Scale },
       ]
     : [];
@@ -86,7 +98,18 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={currentUser ? (currentUser.role === "MANAGER" ? "/admin" : `/${currentUser.role.toLowerCase()}`) : "/"} className="flex items-center gap-3 min-w-0">
+          <Link
+            href={
+              currentUser
+                ? currentUser.role === "MANAGER"
+                  ? "/admin"
+                  : currentUser.role === "KASIR" || currentUser.role === "GUDANG"
+                  ? "/toko"
+                  : `/${currentUser.role.toLowerCase()}`
+                : "/"
+            }
+            className="flex items-center gap-3 min-w-0"
+          >
             <div className="w-9 h-9 bg-red-700 rounded-lg flex items-center justify-center flex-shrink-0">
               <Building2 className="w-5 h-5 text-white" />
             </div>

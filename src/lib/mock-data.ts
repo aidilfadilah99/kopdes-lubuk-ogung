@@ -13,6 +13,7 @@ export const initialConfig: CooperativeConfig = {
   maxLoanWithoutMasterApproval: 5000000,
   currentFiscalYear: 2026,
   shuEstimateTotal: 48500000,
+  martMemberDiscountPercent: 2.5,
 };
 
 export const initialUsers: User[] = [
@@ -59,6 +60,28 @@ export const initialUsers: User[] = [
     phone: "0821-7188-0003",
     isActive: true,
     createdAt: "2026-01-02T09:30:00Z",
+  },
+  {
+    id: "usr-kasir-1",
+    username: "kasir",
+    password: "kopdes2026",
+    name: "Siti Rahmawati",
+    role: "KASIR",
+    email: "siti.kasir@lubukogung.desa.id",
+    phone: "0822-8399-4455",
+    isActive: true,
+    createdAt: "2026-01-03T08:00:00Z",
+  },
+  {
+    id: "usr-gudang-1",
+    username: "gudang",
+    password: "kopdes2026",
+    name: "Bambang Irawan",
+    role: "GUDANG",
+    email: "bambang.gudang@lubukogung.desa.id",
+    phone: "0812-7488-5566",
+    isActive: true,
+    createdAt: "2026-01-03T08:30:00Z",
   },
   {
     id: "usr-anggota-1",

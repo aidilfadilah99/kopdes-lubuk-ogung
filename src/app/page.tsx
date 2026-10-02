@@ -17,6 +17,8 @@ export default function HomePage() {
         ADMIN: "/admin",
         BENDAHARA: "/bendahara",
         ANGGOTA: "/anggota",
+        KASIR: "/toko",
+        GUDANG: "/toko",
       };
       router.replace(map[currentUser.role] ?? "/transparansi");
     }

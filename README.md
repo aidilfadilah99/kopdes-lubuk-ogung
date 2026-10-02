@@ -35,11 +35,21 @@ Aplikasi memiliki pembagian peran yang sangat tegas:
    - Loket penerimaan cicilan angsuran bulanan.
    - Cetak kwitansi transaksi digital resmi (*Rupiah*).
 
-5. **🟡 Warga / Anggota Koperasi** (`/anggota`)
+5. **🛒 Kasir Toko Mart** (`/toko`)
+   - Melayani transaksi belanja kasir POS (Point of Sale).
+   - Verifikasi dan validasi item belanja dan uang tunai/saldo anggota (anti human error).
+   - Cetak struk kasir mini-market resmi.
+
+6. **📦 Petugas Gudang / Stok** (`/toko`)
+   - Manajemen katalog produk dan stok barang harian/sembako.
+   - Pencatatan barang masuk (restock kulakan) dan stok kritis.
+   - Tambah/edit data kemasan barang dagangan.
+
+7. **🟡 Warga / Anggota Koperasi** (`/anggota`)
    - Pantau saldo tabungan (Pokok, Wajib, Sukarela).
    - Cek rincian pinjaman & jadwal angsuran bulanan.
    - Formulir pengajuan pinjaman modal usaha mandiri secara online.
-   - Kalkulator simulasi angsuran & proyeksi SHU (Sisa Hasil Usaha).
+   - Cek harga sembako diskon anggota & riwayat belanja di Kopdes Mart.
 
 ---
 
@@ -51,8 +61,13 @@ Aplikasi memiliki pembagian peran yang sangat tegas:
 |---|---|---|---|
 | **🔴 Master** | **Aidil Fadilah, S.T** | `aidil` | `kopdes2026` |
 | **🟣 Manager** | **Surya Pratama, S.E** | `manager` | `kopdes2026` |
+| **🔵 Admin** | **Rifaldo Almaghribi, S.T** | `rifaldo` | `kopdes2026` |
+| **🟢 Bendahara** | **Abil Syahdinu Pradiksa, S.T** | `abil` | `kopdes2026` |
+| **🛒 Kasir Mart** | **Siti Rahmawati** | `kasir` | `kopdes2026` |
+| **📦 Gudang Mart** | **Bambang Irawan** | `gudang` | `kopdes2026` |
+| **🟡 Anggota** | **Hassan** | `hassan` | `hassan123` |
 
-> Akun Admin, Bendahara, dan Anggota dapat dibuat dan dikelola oleh Master melalui dashboard.  
+> Akun baru dapat dibuat dan dikelola oleh Master melalui dashboard Master.  
 > Password default anggota baru yang didaftarkan = **6 digit terakhir NIK**.
 
 ---

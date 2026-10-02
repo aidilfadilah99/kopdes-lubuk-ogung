@@ -1,4 +1,4 @@
-export type UserRole = 'MASTER' | 'MANAGER' | 'ADMIN' | 'BENDAHARA' | 'ANGGOTA';
+export type UserRole = 'MASTER' | 'MANAGER' | 'ADMIN' | 'BENDAHARA' | 'ANGGOTA' | 'KASIR' | 'GUDANG';
 
 export interface User {
   id: string;
@@ -116,6 +116,7 @@ export interface CooperativeConfig {
   maxLoanWithoutMasterApproval: number; // Rp 5.000.000
   currentFiscalYear: number;
   shuEstimateTotal: number;
+  martMemberDiscountPercent: number; // e.g. 2.5% potongan harga untuk anggota
 }
 
 export type ProductCategory = 
