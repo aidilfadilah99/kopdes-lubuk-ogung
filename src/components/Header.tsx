@@ -20,6 +20,7 @@ import {
   Building2,
   UserCog,
   Store,
+  BarChart3,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -62,11 +63,15 @@ export default function Header() {
   const navLinks = currentUser
     ? [
         ...(currentUser.role === "MASTER"
-          ? [{ href: "/master", label: "Dashboard Master", icon: LayoutDashboard }]
+          ? [
+              { href: "/master", label: "Dashboard Master", icon: LayoutDashboard },
+              { href: "/master?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
+            ]
           : []),
         ...(currentUser.role === "MANAGER"
           ? [
               { href: "/admin", label: "Admin & Warga", icon: Users },
+              { href: "/admin?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
               { href: "/bendahara", label: "Loket Keuangan", icon: Wallet },
               { href: "/anggota", label: "Portal Anggota", icon: User },
             ]
@@ -86,7 +91,7 @@ export default function Header() {
         ...(currentUser.role === "GUDANG"
           ? [{ href: "/toko", label: "Gudang & Stok", icon: Store }]
           : []),
-        ...(currentUser.role !== "KASIR" && currentUser.role !== "GUDANG"
+        ...(currentUser.role !== "KASIR" && currentUser.role !== "GUDANG" && currentUser.role !== "ADMIN"
           ? [{ href: "/toko", label: "Kopdes Mart", icon: Store }]
           : []),
         { href: "/transparansi", label: "Transparansi", icon: Scale },

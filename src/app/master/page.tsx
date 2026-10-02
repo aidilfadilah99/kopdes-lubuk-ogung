@@ -33,12 +33,14 @@ import {
   TrendingUp,
   Coins,
   Store,
+  BarChart3,
 } from "lucide-react";
 import { RpBadge } from "@/components/RupiahIcons";
+import { NeracaKeuangan } from "@/components/NeracaKeuangan";
 
 function MasterDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"approval" | "users" | "config" | "logs">("approval");
+  const [activeTab, setActiveTab] = useState<"approval" | "users" | "neraca" | "config" | "logs">("approval");
   
   // Data state
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -76,6 +78,12 @@ function MasterDashboardContent() {
 
   useEffect(() => {
     refreshData();
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tab") === "neraca") {
+        setActiveTab("neraca");
+      }
+    }
     window.addEventListener("kopdes-data-synced", refreshData);
     return () => window.removeEventListener("kopdes-data-synced", refreshData);
   }, []);
@@ -241,6 +249,18 @@ function MasterDashboardContent() {
         >
           <Users className="w-4 h-4" />
           Kelola Pengguna & Staf ({users.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("neraca")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "neraca"
+              ? "bg-red-600 text-white shadow-md shadow-red-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Neraca Keuangan & SHU
         </button>
 
         <button
@@ -523,6 +543,11 @@ function MasterDashboardContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB NERACA KEUANGAN & SHU */}
+      {activeTab === "neraca" && (
+        <NeracaKeuangan userRole="MASTER" />
       )}
 
       {/* TAB 3: CONFIGURATION */}
