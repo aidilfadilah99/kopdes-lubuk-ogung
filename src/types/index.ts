@@ -117,3 +117,69 @@ export interface CooperativeConfig {
   currentFiscalYear: number;
   shuEstimateTotal: number;
 }
+
+export type ProductCategory = 
+  | 'SEMBAKO' 
+  | 'DAPUR' 
+  | 'MANDI_CUCI' 
+  | 'MINUMAN' 
+  | 'SNACK' 
+  | 'RUMAH_TANGGA' 
+  | 'PERTANIAN';
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  category: ProductCategory;
+  unit: string;              // "sak 5kg", "liter", "pcs", "kg", "papan", "bungkus", "tabung", "dus"
+  costPrice: number;         // Harga Pokok Penjualan (HPP)
+  priceMember: number;       // Harga Khusus Anggota Koperasi
+  priceGeneral: number;      // Harga Umum / Non-Anggota
+  stock: number;
+  minStock: number;
+  barcode?: string;
+  imageUrl?: string;
+  isActive: boolean;
+}
+
+export interface CartItem {
+  product: Product;
+  qty: number;
+  pricePerUnit: number;
+  subtotal: number;
+}
+
+export type PaymentMethod = 'TUNAI' | 'POTONG_SIMPANAN' | 'KASBON_ANGGOTA' | 'QRIS';
+
+export interface SaleItem {
+  productId: string;
+  productName: string;
+  sku: string;
+  qty: number;
+  unit: string;
+  costPrice: number;
+  pricePerUnit: number;
+  subtotal: number;
+}
+
+export interface SaleTransaction {
+  id: string;
+  invoiceNo: string;
+  date: string;
+  buyerType: 'ANGGOTA' | 'UMUM';
+  memberId?: string;
+  memberName?: string;
+  memberNik?: string;
+  items: SaleItem[];
+  totalItems: number;
+  totalCost: number;
+  totalAmount: number;
+  totalDiscount: number;
+  cashierName: string;
+  cashierRole: UserRole;
+  paymentMethod: PaymentMethod;
+  amountPaid: number;
+  changeAmount: number;
+  notes?: string;
+}

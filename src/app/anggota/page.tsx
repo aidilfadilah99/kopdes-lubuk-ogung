@@ -10,7 +10,9 @@ import {
   LoanInstallment,
   Member,
   SavingsTransaction,
+  SaleTransaction,
 } from "@/types";
+import { MartReceiptModal } from "@/components/MartReceiptModal";
 import {
   formatDateIndo,
   formatRupiah,
@@ -28,16 +30,20 @@ import {
   AlertCircle,
   FileText,
   XCircle,
+  Store,
+  ShoppingBag,
 } from "lucide-react";
 
 function AnggotaPortalContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"tabungan" | "pinjaman" | "simulasi">("tabungan");
+  const [activeTab, setActiveTab] = useState<"tabungan" | "pinjaman" | "simulasi" | "mart">("tabungan");
 
   const [member, setMember] = useState<Member | null>(null);
   const [mySavings, setMySavings] = useState<SavingsTransaction[]>([]);
   const [myLoans, setMyLoans] = useState<Loan[]>([]);
   const [myInstallments, setMyInstallments] = useState<LoanInstallment[]>([]);
+  const [mySales, setMySales] = useState<SaleTransaction[]>([]);
+  const [selectedReceipt, setSelectedReceipt] = useState<SaleTransaction | null>(null);
   const [config, setConfig] = useState<CooperativeConfig | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -66,6 +72,15 @@ function AnggotaPortalContent() {
 
       const allIns = DataStore.getInstallments();
       setMyInstallments(allIns.filter((i) => i.memberId === foundMember.id));
+
+      const allSales = DataStore.getSales();
+      setMySales(
+        allSales.filter(
+          (s) =>
+            s.memberId === foundMember.id ||
+            (s.memberNik && s.memberNik === foundMember.nik)
+        )
+      );
     }
 
     setConfig(DataStore.getConfig());
@@ -218,6 +233,18 @@ function AnggotaPortalContent() {
         >
           <Calculator className="w-4 h-4" />
           Ajukan Pinjaman Baru
+        </button>
+
+        <button
+          onClick={() => setActiveTab("mart")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "mart"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Store className="w-4 h-4" />
+          Belanja Kopdes Mart ({mySales.length})
         </button>
       </div>
 
@@ -617,6 +644,150 @@ function AnggotaPortalContent() {
           </div>
         </div>
       )}
+
+      {/* TAB 4: BELANJA KOPDES MART */}
+      {activeTab === "mart" && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs text-slate-500 font-medium block">
+                Total Belanja di Kopdes Mart
+              </span>
+              <span className="text-2xl font-black text-emerald-700 mt-1 block font-mono">
+                {formatRupiah(mySales.reduce((sum, s) => sum + s.totalAmount, 0))}
+              </span>
+              <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">
+                Dihitung dalam pembagian SHU Tahunan
+              </span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs text-slate-500 font-medium block">
+                Total Hemat (Diskon Anggota)
+              </span>
+              <span className="text-2xl font-black text-amber-600 mt-1 block font-mono">
+                {formatRupiah(mySales.reduce((sum, s) => sum + s.totalDiscount, 0))}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Keuntungan langsung belanja di toko koperasi
+              </span>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <span className="text-xs text-slate-500 font-medium block">
+                Jumlah Transaksi Selesai
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
+                {mySales.length} Nota
+              </span>
+              <span className="text-[11px] text-slate-400 mt-1 block">
+                Tercatat resmi di sistem kasir mart
+              </span>
+            </div>
+          </div>
+
+          {/* Banner Ajakan Belanja */}
+          <div className="bg-gradient-to-r from-emerald-700 to-teal-800 rounded-2xl p-6 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+            <div className="space-y-1 text-center sm:text-left">
+              <h4 className="font-extrabold text-lg flex items-center gap-2 justify-center sm:justify-start">
+                <ShoppingBag className="w-5 h-5 text-emerald-300" />
+                <span>Katalog Sembako & Kebutuhan Harian</span>
+              </h4>
+              <p className="text-emerald-100 text-xs max-w-xl">
+                Cek daftar harga beras, minyak goreng, gula, gas LPG 3kg, dan kebutuhan rumah tangga desa lainnya dengan potongan harga khusus anggota koperasi!
+              </p>
+            </div>
+            <a
+              href="/toko"
+              className="px-5 py-2.5 bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs rounded-xl shadow-md transition-colors shrink-0 flex items-center gap-2"
+            >
+              <span>Buka Katalog Toko</span>
+              <Store className="w-4 h-4" />
+            </a>
+          </div>
+
+          {/* Tabel Riwayat Belanja */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h4 className="font-bold text-slate-900 text-sm">Riwayat Belanja Saya</h4>
+                <p className="text-xs text-slate-500">
+                  Struk belanja yang tercatat atas nama akun Anda
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="py-3 px-4">No. Bukti / Invoice</th>
+                    <th className="py-3 px-4">Tanggal Belanja</th>
+                    <th className="py-3 px-4">Barang Dibeli</th>
+                    <th className="py-3 px-4">Metode Bayar</th>
+                    <th className="py-3 px-4 text-right">Total Belanja</th>
+                    <th className="py-3 px-4 text-emerald-600 text-right">Hemat Diskon</th>
+                    <th className="py-3 px-4 text-center">Struk</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {mySales.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400">
+                        Belum ada riwayat belanja di Kopdes Mart
+                      </td>
+                    </tr>
+                  ) : (
+                    mySales.map((s) => (
+                      <tr key={s.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-700">
+                          {s.invoiceNo}
+                        </td>
+                        <td className="py-3 px-4 text-slate-500">
+                          {new Date(s.date).toLocaleString("id-ID", {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}
+                        </td>
+                        <td className="py-3 px-4 text-slate-700">
+                          {s.totalItems} item ({s.items.map((i) => i.productName).slice(0, 2).join(", ")}
+                          {s.items.length > 2 && "..."})
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                            {s.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900 text-right">
+                          {formatRupiah(s.totalAmount)}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-emerald-600 text-right">
+                          {formatRupiah(s.totalDiscount)}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => setSelectedReceipt(s)}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-[11px] transition-colors"
+                          >
+                            Buka Struk
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Struk Belanja Anggota */}
+      <MartReceiptModal
+        sale={selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+      />
     </div>
   );
 }

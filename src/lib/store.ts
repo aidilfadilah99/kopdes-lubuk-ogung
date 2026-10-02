@@ -9,6 +9,8 @@ import {
   SavingsTransaction,
   User,
   UserRole,
+  Product,
+  SaleTransaction,
 } from "@/types";
 import {
   initialAuditLogs,
@@ -18,6 +20,8 @@ import {
   initialMembers,
   initialSavings,
   initialUsers,
+  initialProducts,
+  initialSales,
 } from "./mock-data";
 
 const STORAGE_KEYS = {
@@ -28,6 +32,8 @@ const STORAGE_KEYS = {
   INSTALLMENTS: "kopdes_installments_v3",
   CONFIG: "kopdes_config_v3",
   LOGS: "kopdes_logs_v3",
+  PRODUCTS: "kopdes_products_v3",
+  SALES: "kopdes_sales_v3",
 };
 
 function getFromStorage<T>(key: string, defaultValue: T): T {
@@ -75,7 +81,7 @@ export const DataStore = {
       if (!res.ok) return false;
       const json = await res.json();
       if (json.success && json.isCloud && json.data) {
-        const { config, users, members, savings, loans, installments, audit_logs } = json.data;
+        const { config, users, members, savings, loans, installments, audit_logs, products, sales } = json.data;
         if (config) setToStorage(STORAGE_KEYS.CONFIG, config);
         if (users) setToStorage(STORAGE_KEYS.USERS, users);
         if (members) setToStorage(STORAGE_KEYS.MEMBERS, members);
@@ -83,6 +89,8 @@ export const DataStore = {
         if (loans) setToStorage(STORAGE_KEYS.LOANS, loans);
         if (installments) setToStorage(STORAGE_KEYS.INSTALLMENTS, installments);
         if (audit_logs) setToStorage(STORAGE_KEYS.LOGS, audit_logs);
+        if (products) setToStorage(STORAGE_KEYS.PRODUCTS, products);
+        if (sales) setToStorage(STORAGE_KEYS.SALES, sales);
 
         // Beritahu komponen UI bahwa data cloud terbaru sudah dimuat
         window.dispatchEvent(new Event("kopdes-data-synced"));
@@ -312,6 +320,94 @@ export const DataStore = {
     pushToCloud("audit_logs", trimmed);
   },
 
+  // PRODUCTS / TOKO KOPDES MART
+  getProducts(): Product[] {
+    return getFromStorage(STORAGE_KEYS.PRODUCTS, initialProducts);
+  },
+  saveProduct(product: Product): void {
+    const list = this.getProducts();
+    const idx = list.findIndex((p) => p.id === product.id);
+    if (idx >= 0) {
+      list[idx] = product;
+    } else {
+      list.unshift(product);
+    }
+    setToStorage(STORAGE_KEYS.PRODUCTS, list);
+    pushToCloud("products", list);
+  },
+  deleteProduct(productId: string): void {
+    const list = this.getProducts().filter((p) => p.id !== productId);
+    setToStorage(STORAGE_KEYS.PRODUCTS, list);
+    pushToCloud("products", list);
+  },
+  restockProduct(productId: string, addQty: number): Product | null {
+    const list = this.getProducts();
+    const prd = list.find((p) => p.id === productId);
+    if (!prd) return null;
+    prd.stock += addQty;
+    setToStorage(STORAGE_KEYS.PRODUCTS, list);
+    pushToCloud("products", list);
+    return prd;
+  },
+
+  // SALES / TRANSAKSI PENJUALAN
+  getSales(): SaleTransaction[] {
+    return getFromStorage(STORAGE_KEYS.SALES, initialSales);
+  },
+  recordSale(sale: SaleTransaction): void {
+    const sales = this.getSales();
+    sales.unshift(sale);
+    setToStorage(STORAGE_KEYS.SALES, sales);
+    pushToCloud("sales", sales);
+
+    // Otomatis kurangi stok produk yang terjual
+    const products = this.getProducts();
+    for (const item of sale.items) {
+      const p = products.find((prod) => prod.id === item.productId);
+      if (p) {
+        p.stock = Math.max(0, p.stock - item.qty);
+      }
+    }
+    setToStorage(STORAGE_KEYS.PRODUCTS, products);
+    pushToCloud("products", products);
+
+    // Jika metode pembayaran 'POTONG_SIMPANAN', otomatis potong saldo tabungan anggota
+    if (sale.paymentMethod === "POTONG_SIMPANAN" && sale.memberId) {
+      const members = this.getMembers();
+      const mem = members.find((m) => m.id === sale.memberId);
+      if (mem) {
+        mem.savingsTotal = Math.max(0, mem.savingsTotal - sale.totalAmount);
+        setToStorage(STORAGE_KEYS.MEMBERS, members);
+        pushToCloud("members", members);
+
+        // Catat transaksi mutasi tabungan
+        const savingsList = this.getSavings();
+        const trx: SavingsTransaction = {
+          id: `trx-mart-${Date.now()}`,
+          memberId: mem.id,
+          memberName: mem.name,
+          memberNik: mem.nik,
+          type: "SUKARELA",
+          amount: -sale.totalAmount,
+          date: sale.date.split("T")[0],
+          notes: `Belanja Kopdes Mart (${sale.invoiceNo})`,
+          officerName: sale.cashierName,
+          status: "SUCCESS",
+        };
+        savingsList.unshift(trx);
+        setToStorage(STORAGE_KEYS.SAVINGS, savingsList);
+        pushToCloud("savings", savingsList);
+      }
+    }
+
+    // Catat ke Audit Log
+    this.addAuditLog(
+      "TRANSAKSI_MART",
+      `Penjualan ${sale.invoiceNo} Rp ${sale.totalAmount.toLocaleString("id-ID")} (${sale.buyerType === "ANGGOTA" ? sale.memberName : "Umum"}) - ${sale.paymentMethod}`,
+      { id: "usr-cashier", name: sale.cashierName, role: sale.cashierRole }
+    );
+  },
+
   // RESET
   resetAll(): void {
     if (typeof window === "undefined") return;
@@ -322,5 +418,7 @@ export const DataStore = {
     localStorage.removeItem(STORAGE_KEYS.INSTALLMENTS);
     localStorage.removeItem(STORAGE_KEYS.CONFIG);
     localStorage.removeItem(STORAGE_KEYS.LOGS);
+    localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
+    localStorage.removeItem(STORAGE_KEYS.SALES);
   },
 };

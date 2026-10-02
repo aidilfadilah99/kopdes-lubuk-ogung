@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Building2,
   UserCog,
+  Store,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -75,6 +76,7 @@ export default function Header() {
         ...(currentUser.role === "ANGGOTA"
           ? [{ href: "/anggota", label: "Portal Saya", icon: User }]
           : []),
+        { href: "/toko", label: "Kopdes Mart", icon: Store },
         { href: "/transparansi", label: "Transparansi", icon: Scale },
       ]
     : [];

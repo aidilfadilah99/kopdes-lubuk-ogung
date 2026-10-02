@@ -8,6 +8,8 @@ import {
   initialLoans,
   initialInstallments,
   initialAuditLogs,
+  initialProducts,
+  initialSales,
 } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,8 @@ const SEED_DATA: Record<string, any> = {
   loans: initialLoans,
   installments: initialInstallments,
   audit_logs: initialAuditLogs,
+  products: initialProducts,
+  sales: initialSales,
 };
 
 export async function GET(req: Request) {

@@ -68,33 +68,39 @@ export default function HomePage() {
       </section>
 
       {/* Feature cards */}
-      <section className="max-w-4xl mx-auto px-4 pb-16 grid md:grid-cols-3 gap-6">
+      <section className="max-w-4xl mx-auto px-4 pb-16 grid sm:grid-cols-2 md:grid-cols-4 gap-4">
         {[
           {
             icon: Shield,
             color: "text-red-600 bg-red-50",
             title: "Sistem Berbasis Peran",
-            desc: "Akses terpisah untuk Master, Admin, Bendahara, dan Anggota sesuai tanggung jawab masing-masing.",
+            desc: "Akses terpisah untuk Master, Manager, Admin, Bendahara, dan Anggota sesuai tupoksi.",
           },
           {
             icon: TrendingUp,
             color: "text-green-600 bg-green-50",
             title: "Pengelolaan Keuangan",
-            desc: "Catat simpanan, pinjaman, dan angsuran secara real-time dengan rekap otomatis.",
+            desc: "Catat simpanan, pinjaman modal, dan cicilan angsuran secara real-time.",
+          },
+          {
+            icon: Users,
+            color: "text-emerald-600 bg-emerald-50",
+            title: "Kopdes Mart Sembako",
+            desc: "Minimarket kebutuhan harian warga & sembako dengan diskon khusus anggota koperasi.",
           },
           {
             icon: Scale,
             color: "text-blue-600 bg-blue-50",
             title: "Transparansi Publik",
-            desc: "Data keuangan terbuka untuk seluruh warga. Tidak perlu login untuk melihat kondisi koperasi.",
+            desc: "Laporan keuangan dan proyeksi SHU terbuka dapat dipantau oleh seluruh warga.",
           },
         ].map((f) => (
-          <div key={f.title} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <div className={`w-12 h-12 ${f.color} rounded-xl flex items-center justify-center mb-4`}>
-              <f.icon className="w-6 h-6" />
+          <div key={f.title} className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div className={`w-10 h-10 ${f.color} rounded-xl flex items-center justify-center mb-3`}>
+              <f.icon className="w-5 h-5" />
             </div>
-            <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
-            <p className="text-gray-600 text-sm leading-relaxed">{f.desc}</p>
+            <h3 className="font-semibold text-gray-900 mb-1 text-sm">{f.title}</h3>
+            <p className="text-gray-600 text-xs leading-relaxed">{f.desc}</p>
           </div>
         ))}
       </section>

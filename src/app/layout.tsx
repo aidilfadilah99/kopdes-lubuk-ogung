@@ -29,7 +29,7 @@ export default function RootLayout({
                   Koperasi Desa Merah Putih Lubuk Ogung &copy; {new Date().getFullYear()}
                 </p>
                 <p className="mt-1 text-slate-400">
-                  Desa Lubuk Ogung, Kec. Bandar Sei Kijang, Kab. Pelalawan, Riau | Siap Hosting Vercel
+                  Desa Lubuk Ogung, Kec. Bandar Sei Kijang, Kab. Pelalawan, Riau | by Aidil Fadilah
                 </p>
               </div>
             </footer>
