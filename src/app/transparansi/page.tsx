@@ -45,6 +45,7 @@ export default function TransparansiPublikPage() {
   const [installments, setInstallments] = useState<any[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<SaleTransaction[]>([]);
+  const [sppdList, setSppdList] = useState<any[]>([]);
 
   const refreshData = () => {
     setConfig(DataStore.getConfig());
@@ -54,6 +55,7 @@ export default function TransparansiPublikPage() {
     setInstallments(DataStore.getInstallments());
     setProducts(DataStore.getProducts());
     setSales(DataStore.getSales());
+    setSppdList(DataStore.getPerjalananDinas());
   };
 
   useEffect(() => {
@@ -82,10 +84,17 @@ export default function TransparansiPublikPage() {
   const totalLabaKotorMart = sales.reduce((sum, s) => sum + (s.totalAmount - s.totalCost), 0);
   const totalDiskonDinikmatiAnggota = sales.reduce((sum, s) => sum + s.totalDiscount, 0);
 
+  // Kas Keluar Operasional Perjalanan Dinas (SPPD)
+  const totalSppdDicairkan = sppdList
+    .filter((s: any) => s.status === "DICAIRKAN")
+    .reduce((sum: number, s: any) => sum + s.totalBiaya, 0);
+
   // Total Kas Bersih Nyata (Likuiditas Brankas Kasir + Rekening Bank Koperasi)
+  // Selaras sempurna dengan Neraca Keuangan dan Pengawas:
+  // baseline + simpananNeto - pinjamanDisbursed + angsuranDiterima + penjualanMart - totalSppdDicairkan
   const totalKasBersihOperasional = Math.max(
     18500000,
-    baselineKasAwal + (totalSimpananMasuk - totalPenarikanSukarela) - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart
+    baselineKasAwal + (totalSimpananMasuk - totalPenarikanSukarela) - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan
   );
   const kasTunaiLoket = Math.round(totalKasBersihOperasional * 0.3);
   const kasBankRiauKepri = totalKasBersihOperasional - kasTunaiLoket;
@@ -240,8 +249,8 @@ export default function TransparansiPublikPage() {
             </div>
             <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-0.5">
               <p className="flex justify-between">
-                <span>Sukarela / Panen:</span>
-                <span className="font-bold text-slate-800">{formatRupiah(totalSukarela)}</span>
+                <span>Sukarela / Panen (Neto):</span>
+                <span className="font-bold text-slate-800">{formatRupiah(saldoSukarelaNeto)}</span>
               </p>
               <p className="flex justify-between">
                 <span>Pokok & Wajib:</span>

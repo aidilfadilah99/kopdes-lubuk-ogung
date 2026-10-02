@@ -41,6 +41,7 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const installments = DataStore.getInstallments();
   const products = DataStore.getProducts();
   const sales = DataStore.getSales();
+  const sppdList = DataStore.getPerjalananDinas();
 
   useEffect(() => {
     const handleSync = () => setDataUpdated(new Date().toISOString());
@@ -72,12 +73,18 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const countUmum = sales.filter((s) => s.buyerType === "UMUM").length;
   const countAnggota = sales.filter((s) => s.buyerType === "ANGGOTA").length;
 
+  // Kas Keluar Operasional Perjalanan Dinas (SPPD)
+  const totalSppdDicairkan = sppdList
+    .filter((s) => s.status === "DICAIRKAN")
+    .reduce((sum, s) => sum + s.totalBiaya, 0);
+
   // Baseline kas operasional awal desa
-  // Formula identik dengan Transparansi: basline + simpananNeto - pencairan + angsuran + penjualanMart
+  // Formula identik dengan Transparansi & Pengawas:
+  // baseline + simpananNeto - pinjamanDisbursed + angsuranDiterima + penjualanMart - totalSppdDicairkan
   const baselineKasAwal = 35000000;
   const kasTotalOperasional = Math.max(
     18500000,
-    baselineKasAwal + totalSimpananNeto - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart
+    baselineKasAwal + totalSimpananNeto - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan
   );
   const kasTunaiKasirLoket = Math.round(kasTotalOperasional * 0.3);
   const kasBankRiauKepri = kasTotalOperasional - kasTunaiKasirLoket;

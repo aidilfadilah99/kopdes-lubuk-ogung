@@ -150,7 +150,8 @@ function AnggotaPortalContent() {
   // Savings breakdown
   const simpananPokok = mySavings.filter((s) => s.type === "POKOK").reduce((a, b) => a + b.amount, 0);
   const simpananWajib = mySavings.filter((s) => s.type === "WAJIB").reduce((a, b) => a + b.amount, 0);
-  const simpananSukarela = mySavings.filter((s) => s.type === "SUKARELA").reduce((a, b) => a + b.amount, 0);
+  const penarikanSukarela = mySavings.filter((s) => s.type === "PENARIKAN_SUKARELA").reduce((a, b) => a + b.amount, 0);
+  const simpananSukarela = Math.max(0, mySavings.filter((s) => s.type === "SUKARELA").reduce((a, b) => a + b.amount, 0) - penarikanSukarela);
   const totalSimpanan = simpananPokok + simpananWajib + simpananSukarela;
 
   // Estimated personal SHU (proportional calculation demo)

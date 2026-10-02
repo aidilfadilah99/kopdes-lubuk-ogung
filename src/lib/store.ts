@@ -175,6 +175,9 @@ export const DataStore = {
     }
     setToStorage(STORAGE_KEYS.MEMBERS, members);
     pushToCloud("members", members);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
   },
 
   // SAVINGS
@@ -200,6 +203,10 @@ export const DataStore = {
       setToStorage(STORAGE_KEYS.MEMBERS, members);
       pushToCloud("members", members);
     }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
   },
 
   // LOANS
@@ -211,6 +218,9 @@ export const DataStore = {
     list.unshift(loan);
     setToStorage(STORAGE_KEYS.LOANS, list);
     pushToCloud("loans", list);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
   },
   updateLoanStatus(
     loanId: string,
@@ -243,6 +253,9 @@ export const DataStore = {
 
     setToStorage(STORAGE_KEYS.LOANS, list);
     pushToCloud("loans", list);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
     return loan;
   },
 
@@ -306,6 +319,9 @@ export const DataStore = {
       pushToCloud("loans", loans);
     }
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
     return ins;
   },
 
@@ -348,11 +364,17 @@ export const DataStore = {
     }
     setToStorage(STORAGE_KEYS.PRODUCTS, list);
     pushToCloud("products", list);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
   },
   deleteProduct(productId: string): void {
     const list = this.getProducts().filter((p) => p.id !== productId);
     setToStorage(STORAGE_KEYS.PRODUCTS, list);
     pushToCloud("products", list);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
   },
   restockProduct(productId: string, addQty: number): Product | null {
     const list = this.getProducts();
@@ -361,6 +383,9 @@ export const DataStore = {
     prd.stock += addQty;
     setToStorage(STORAGE_KEYS.PRODUCTS, list);
     pushToCloud("products", list);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
     return prd;
   },
 
@@ -394,17 +419,17 @@ export const DataStore = {
         setToStorage(STORAGE_KEYS.MEMBERS, members);
         pushToCloud("members", members);
 
-        // Catat transaksi mutasi tabungan
+        // Catat transaksi mutasi tabungan sebagai PENARIKAN_SUKARELA (nominal positif)
         const savingsList = this.getSavings();
         const trx: SavingsTransaction = {
           id: `trx-mart-${Date.now()}`,
           memberId: mem.id,
           memberName: mem.name,
           memberNik: mem.nik,
-          type: "SUKARELA",
-          amount: -sale.totalAmount,
+          type: "PENARIKAN_SUKARELA",
+          amount: sale.totalAmount,
           date: sale.date.split("T")[0],
-          notes: `Belanja Kopdes Mart (${sale.invoiceNo})`,
+          notes: `Belanja Kopdes Mart (${sale.invoiceNo}) - Potong Simpanan`,
           officerName: sale.cashierName,
           status: "SUCCESS",
         };
