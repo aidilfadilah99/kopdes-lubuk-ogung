@@ -165,7 +165,7 @@ function TokoPageContent() {
   const getProductMemberPrice = (p: Product) => {
     if (p.priceMember && p.priceMember > 0) return p.priceMember;
     const discounted = p.priceGeneral * (1 - memberDiscountPercent / 100);
-    return Math.round(discounted);
+    return Math.ceil(discounted / 100) * 100;
   };
 
   // Filtered Products
@@ -399,7 +399,7 @@ function TokoPageContent() {
     const currentProducts = DataStore.getProducts();
     const updatedProducts = currentProducts.map((p) => ({
       ...p,
-      priceMember: Math.round(p.priceGeneral * (1 - newDiscount / 100)),
+      priceMember: Math.ceil((p.priceGeneral * (1 - newDiscount / 100)) / 100) * 100,
     }));
     updatedProducts.forEach((p) => DataStore.saveProduct(p));
 
@@ -431,7 +431,7 @@ function TokoPageContent() {
     const memberPrice =
       Number(productForm.priceMember) > 0
         ? Number(productForm.priceMember)
-        : Math.round(generalPrice * (1 - memberDiscountPercent / 100));
+        : Math.ceil((generalPrice * (1 - memberDiscountPercent / 100)) / 100) * 100;
 
     const newProd: Product = {
       id: editingProduct?.id || `prd-${Date.now()}`,
@@ -1335,7 +1335,7 @@ function TokoPageContent() {
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   Contoh: Jika diset <strong>{tempDiscountPercent}%</strong>, barang umum Rp 100.000 menjadi Rp{" "}
-                  {Math.round(100000 * (1 - tempDiscountPercent / 100)).toLocaleString("id-ID")} untuk anggota.
+                  {(Math.ceil((100000 * (1 - tempDiscountPercent / 100)) / 100) * 100).toLocaleString("id-ID")} untuk anggota (dibulatkan ke atas ke ratusan).
                 </p>
               </div>
 
@@ -1573,7 +1573,7 @@ function TokoPageContent() {
                     value={productForm.priceGeneral}
                     onChange={(e) => {
                       const gen = Number(e.target.value);
-                      const mem = Math.round(gen * (1 - memberDiscountPercent / 100));
+                      const mem = Math.ceil((gen * (1 - memberDiscountPercent / 100)) / 100) * 100;
                       setProductForm({
                         ...productForm,
                         priceGeneral: gen,
@@ -1592,7 +1592,7 @@ function TokoPageContent() {
                     min="0"
                     value={
                       productForm.priceMember ||
-                      Math.round((productForm.priceGeneral || 0) * (1 - memberDiscountPercent / 100))
+                      Math.ceil(((productForm.priceGeneral || 0) * (1 - memberDiscountPercent / 100)) / 100) * 100
                     }
                     onChange={(e) =>
                       setProductForm({
