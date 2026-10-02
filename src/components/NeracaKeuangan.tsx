@@ -42,6 +42,8 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const products = DataStore.getProducts();
   const sales = DataStore.getSales();
   const sppdList = DataStore.getPerjalananDinas();
+  const penyertaanModalList = DataStore.getPenyertaanModal();
+  const pengeluaranBarangList = DataStore.getPengeluaranBarang();
 
   useEffect(() => {
     const handleSync = () => setDataUpdated(new Date().toISOString());
@@ -78,13 +80,20 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
     .filter((s) => s.status === "DICAIRKAN")
     .reduce((sum, s) => sum + s.totalBiaya, 0);
 
-  // Baseline kas operasional awal desa
-  // Formula identik dengan Transparansi & Pengawas:
-  // baseline + simpananNeto - pinjamanDisbursed + angsuranDiterima + penjualanMart - totalSppdDicairkan
-  const baselineKasAwal = 35000000;
+  // Total Penyertaan Modal Masuk (Pemerintah / APBDes / Pihak Ketiga)
+  const totalPenyertaanModal = penyertaanModalList.reduce((sum, p) => sum + p.nominal, 0);
+
+  // Total Pengeluaran Pembelian Barang / Aset / Operasional
+  const totalPengeluaranBarang = pengeluaranBarangList.reduce((sum, p) => sum + p.totalBiaya, 0);
+  const belanjaAsetTetap = pengeluaranBarangList
+    .filter((p) => p.kategori === "ASET_INVENTARIS")
+    .reduce((sum, p) => sum + p.totalBiaya, 0);
+
+  // Kas Operasional Riil Nyata:
+  // Modal Masuk + Simpanan Neto - Pinjaman Dicairkan + Angsuran Diterima + Penjualan Toko - SPPD - Pengeluaran Belanja Barang
   const kasTotalOperasional = Math.max(
-    18500000,
-    baselineKasAwal + totalSimpananNeto - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan
+    0,
+    totalPenyertaanModal + totalSimpananNeto - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan - totalPengeluaranBarang
   );
   const kasTunaiKasirLoket = Math.round(kasTotalOperasional * 0.3);
   const kasBankRiauKepri = kasTotalOperasional - kasTunaiKasirLoket;
@@ -109,10 +118,10 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const totalAsetLancar =
     kasTotalOperasional + piutangPokokPinjaman + piutangJasaBungaEstimasi + nilaiPersediaanStokHPP;
 
-  // 4. Aset Tetap / Peralatan (22jt perolehan - 3.5jt penyusutan = 18.5jt buku)
-  const nilaiPerolehanPeralatan = 22000000; // Komputer POS, Barcode scanner, Rak etalase toko, Brankas
+  // 4. Aset Tetap / Peralatan (Inventaris Gedung, POS, Rak Etalase, Freezer)
+  const nilaiPerolehanPeralatan = 22000000 + belanjaAsetTetap; // Sarana awal serah terima desa + belanja aset baru
   const akumulasiPenyusutanPeralatan = 3500000;
-  const nilaiBukuAsetTetap = nilaiPerolehanPeralatan - akumulasiPenyusutanPeralatan; // = 18.500.000
+  const nilaiBukuAsetTetap = nilaiPerolehanPeralatan - akumulasiPenyusutanPeralatan; // Nilai buku riil
 
   // TOTAL AKTIVA
   const totalAktiva = totalAsetLancar + nilaiBukuAsetTetap;
@@ -120,14 +129,14 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   // --- PERHITUNGAN PASIVA (KEWAJIBAN & EKUITAS) ---
   // 1. Kewajiban Jangka Pendek
   const kewajibanSimpananSukarela = totalSukarela - totalPenarikanSukarela; // Saldo sukarela neto = kewajiban titipan yang masih ada
-  const hutangUsahaSupplierMart = 4500000; // Kulakan konsinyasi sembako belum jatuh tempo
+  const hutangUsahaSupplierMart = 0; // Bersih saat peluncuran (nol hutang)
   const totalKewajiban = kewajibanSimpananSukarela + hutangUsahaSupplierMart;
 
   // 2. Ekuitas (Modal Sendiri)
   const modalSimpananPokok = totalPokok;
   const modalSimpananWajib = totalWajib;
-  const modalPenyertaanDesa = 30000000; // Hibah dana awal BUMDes/Kopdes Merah Putih
-  const cadanganKoperasi = 18000000; // Cadangan akumulasi tahun-tahun sebelumnya
+  const modalPenyertaanDesa = totalPenyertaanModal; // Dinamis dari pencatatan Penyertaan Modal (Pemerintah/APBDes/Pihak Ketiga)
+  const cadanganKoperasi = 18500000; // Cadangan modal aset sarana awal dari serah terima desa
 
   // SHU Berjalan dihitung agar Neraca seimbang sempurna (Aktiva = Pasiva)
   const shuTahunBerjalan = totalAktiva - (totalKewajiban + modalSimpananPokok + modalSimpananWajib + modalPenyertaanDesa + cadanganKoperasi);

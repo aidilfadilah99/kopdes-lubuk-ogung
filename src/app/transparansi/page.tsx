@@ -46,6 +46,8 @@ export default function TransparansiPublikPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<SaleTransaction[]>([]);
   const [sppdList, setSppdList] = useState<any[]>([]);
+  const [penyertaanModalList, setPenyertaanModalList] = useState<any[]>([]);
+  const [pengeluaranBarangList, setPengeluaranBarangList] = useState<any[]>([]);
 
   const refreshData = () => {
     setConfig(DataStore.getConfig());
@@ -56,6 +58,8 @@ export default function TransparansiPublikPage() {
     setProducts(DataStore.getProducts());
     setSales(DataStore.getSales());
     setSppdList(DataStore.getPerjalananDinas());
+    setPenyertaanModalList(DataStore.getPenyertaanModal());
+    setPengeluaranBarangList(DataStore.getPengeluaranBarang());
   };
 
   useEffect(() => {
@@ -65,7 +69,6 @@ export default function TransparansiPublikPage() {
   }, []);
 
   // --- KALKULASI KAS BERSIH & ARUS DANA ---
-  const baselineKasAwal = 35000000;
   const totalPokok = savings.filter((s) => s.type === "POKOK").reduce((sum, s) => sum + s.amount, 0);
   const totalWajib = savings.filter((s) => s.type === "WAJIB").reduce((sum, s) => sum + s.amount, 0);
   const totalSukarela = savings.filter((s) => s.type === "SUKARELA").reduce((sum, s) => sum + s.amount, 0);
@@ -89,12 +92,21 @@ export default function TransparansiPublikPage() {
     .filter((s: any) => s.status === "DICAIRKAN")
     .reduce((sum: number, s: any) => sum + s.totalBiaya, 0);
 
+  // Total Penyertaan Modal Masuk (Pemerintah / APBDes / Pihak Ketiga)
+  const totalPenyertaanModal = penyertaanModalList.reduce((sum: number, p: any) => sum + p.nominal, 0);
+
+  // Total Pengeluaran Pembelian Barang / Aset / Operasional
+  const totalPengeluaranBarang = pengeluaranBarangList.reduce((sum: number, p: any) => sum + p.totalBiaya, 0);
+  const belanjaAsetTetap = pengeluaranBarangList
+    .filter((p: any) => p.kategori === "ASET_INVENTARIS")
+    .reduce((sum: number, p: any) => sum + p.totalBiaya, 0);
+
   // Total Kas Bersih Nyata (Likuiditas Brankas Kasir + Rekening Bank Koperasi)
   // Selaras sempurna dengan Neraca Keuangan dan Pengawas:
-  // baseline + simpananNeto - pinjamanDisbursed + angsuranDiterima + penjualanMart - totalSppdDicairkan
+  // modalMasuk + simpananNeto - pinjamanDisbursed + angsuranDiterima + penjualanMart - totalSppdDicairkan - totalPengeluaranBarang
   const totalKasBersihOperasional = Math.max(
-    18500000,
-    baselineKasAwal + (totalSimpananMasuk - totalPenarikanSukarela) - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan
+    0,
+    totalPenyertaanModal + (totalSimpananMasuk - totalPenarikanSukarela) - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan - totalPengeluaranBarang
   );
   const kasTunaiLoket = Math.round(totalKasBersihOperasional * 0.3);
   const kasBankRiauKepri = totalKasBersihOperasional - kasTunaiLoket;
@@ -116,14 +128,14 @@ export default function TransparansiPublikPage() {
     .reduce((sum: number, i: any) => sum + (i.interestAmount ?? 0), 0);
   const nilaiPersediaanStokHPP = products.reduce((sum, p) => sum + p.stock * p.costPrice, 0);
   const totalAsetLancar = totalKasBersihOperasional + piutangPokokPinjaman + piutangJasaBungaEstimasi + nilaiPersediaanStokHPP;
-  const nilaiBukuAsetTetap = 18500000; // Inventaris & peralatan operasional (22jt - 3.5jt penyusutan)
+  const nilaiBukuAsetTetap = 18500000 + belanjaAsetTetap; // Inventaris gedung & sarana awal desa (22jt - 3.5jt) + aset baru
   const totalAktiva = totalAsetLancar + nilaiBukuAsetTetap;
 
-  // Kewajiban: saldo sukarela neto (masuk - keluar) = titipan yang masih ada + hutang supplier
+  // Kewajiban: saldo sukarela neto (masuk - keluar) = titipan yang masih ada + hutang supplier (0 saat launch)
   const saldoSukarelaNeto = totalSukarela - totalPenarikanSukarela;
-  const totalKewajiban = saldoSukarelaNeto + 4500000; // Saldo sukarela titipan + hutang kulakan sembako
-  const modalPenyertaanDesa = 30000000;
-  const cadanganKoperasi = 18000000;
+  const totalKewajiban = saldoSukarelaNeto + 0;
+  const modalPenyertaanDesa = totalPenyertaanModal; // Dinamis dari pencatatan modal pemerintah / pihak ketiga
+  const cadanganKoperasi = 18500000;
 
   // SHU Bersih Berjalan Riil Tahun Ini
   const shuBersihBerjalan = totalAktiva - (totalKewajiban + totalPokok + totalWajib + modalPenyertaanDesa + cadanganKoperasi);

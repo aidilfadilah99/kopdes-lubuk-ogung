@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -62,6 +62,8 @@ function PengawasDashboardContent() {
   const [sales, setSales] = useState<SaleTransaction[]>([]);
   const [sppdList, setSppdList] = useState<PerjalananDinas[]>([]);
   const [notes, setNotes] = useState<PengawasanNote[]>([]);
+  const [penyertaanModalList, setPenyertaanModalList] = useState<any[]>([]);
+  const [pengeluaranBarangList, setPengeluaranBarangList] = useState<any[]>([]);
 
   // Form Temuan Baru Pengawas
   const [aspek, setAspek] = useState<"KEUANGAN" | "KEPATUHAN" | "OPERASIONAL_MART" | "PINJAMAN" | "UMUM">("KEUANGAN");
@@ -84,6 +86,8 @@ function PengawasDashboardContent() {
     setSales(DataStore.getSales());
     setSppdList(DataStore.getPerjalananDinas());
     setNotes(DataStore.getPengawasanNotes());
+    setPenyertaanModalList(DataStore.getPenyertaanModal());
+    setPengeluaranBarangList(DataStore.getPengeluaranBarang());
   };
 
   const handleTabSwitch = (tab: string) => {
@@ -134,7 +138,8 @@ function PengawasDashboardContent() {
   }, []);
 
   // --- KALKULASI ARUS KAS & INDIKATOR AUDIT ---
-  const baselineKasAwal = 35000000;
+  const totalPenyertaanModal = penyertaanModalList.reduce((sum, p) => sum + p.nominal, 0);
+  const totalPengeluaranBarang = pengeluaranBarangList.reduce((sum, p) => sum + p.totalBiaya, 0);
   const totalPokok = savings.filter((s) => s.type === "POKOK").reduce((sum, s) => sum + s.amount, 0);
   const totalWajib = savings.filter((s) => s.type === "WAJIB").reduce((sum, s) => sum + s.amount, 0);
   const totalSukarela = savings.filter((s) => s.type === "SUKARELA").reduce((sum, s) => sum + s.amount, 0);
@@ -157,8 +162,8 @@ function PengawasDashboardContent() {
     .reduce((sum, s) => sum + s.totalBiaya, 0);
 
   const totalKasOperasional = Math.max(
-    18500000,
-    baselineKasAwal + (totalSimpananMasuk - totalPenarikanSukarela) - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan
+    0,
+    totalPenyertaanModal + (totalSimpananMasuk - totalPenarikanSukarela) - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart - totalSppdDicairkan - totalPengeluaranBarang
   );
   const kasTunaiLoket = Math.round(totalKasOperasional * 0.3);
   const kasBankRiauKepri = totalKasOperasional - kasTunaiLoket;
@@ -793,3 +798,4 @@ function PengawasDashboardContent() {
     </div>
   );
 }
+

@@ -74,7 +74,7 @@ export default function LoginPage() {
     { label: "Master", username: "aidil", password: "kopdes2026", color: "bg-red-50 border-red-200 text-red-700" },
     { label: "Admin", username: "rifaldo", password: "kopdes2026", color: "bg-blue-50 border-blue-200 text-blue-700" },
     { label: "Bendahara", username: "abil", password: "kopdes2026", color: "bg-green-50 border-green-200 text-green-700" },
-    { label: "Anggota", username: "hassan", password: "hassan123", color: "bg-yellow-50 border-yellow-200 text-yellow-700" },
+    { label: "Pengawas", username: "pengawas", password: "kopdes2026", color: "bg-purple-50 border-purple-200 text-purple-700" },
   ];
 
   return (

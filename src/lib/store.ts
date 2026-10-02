@@ -14,6 +14,8 @@ import {
   PerjalananDinas,
   PerjalananDinasRate,
   PengawasanNote,
+  PenyertaanModal,
+  PengeluaranBarang,
 } from "@/types";
 import {
   initialAuditLogs,
@@ -27,20 +29,24 @@ import {
   initialSales,
   initialPerjalananDinas,
   initialPengawasanNotes,
+  initialPenyertaanModal,
+  initialPengeluaranBarang,
 } from "./mock-data";
 
 const STORAGE_KEYS = {
-  USERS: "kopdes_users_v3",
-  MEMBERS: "kopdes_members_v3",
-  SAVINGS: "kopdes_savings_v3",
-  LOANS: "kopdes_loans_v3",
-  INSTALLMENTS: "kopdes_installments_v3",
-  CONFIG: "kopdes_config_v3",
-  LOGS: "kopdes_logs_v3",
-  PRODUCTS: "kopdes_products_v3",
-  SALES: "kopdes_sales_v3",
-  PERJALANAN_DINAS: "kopdes_perjalanan_dinas_v3",
-  PENGAWASAN_NOTES: "kopdes_pengawasan_notes_v3",
+  USERS: "kopdes_users_v4",
+  MEMBERS: "kopdes_members_v4",
+  SAVINGS: "kopdes_savings_v4",
+  LOANS: "kopdes_loans_v4",
+  INSTALLMENTS: "kopdes_installments_v4",
+  CONFIG: "kopdes_config_v4",
+  LOGS: "kopdes_logs_v4",
+  PRODUCTS: "kopdes_products_v4",
+  SALES: "kopdes_sales_v4",
+  PERJALANAN_DINAS: "kopdes_perjalanan_dinas_v4",
+  PENGAWASAN_NOTES: "kopdes_pengawasan_notes_v4",
+  PENYERTAAN_MODAL: "kopdes_penyertaan_modal_v4",
+  PENGELUARAN_BARANG: "kopdes_pengeluaran_barang_v4",
 };
 
 function getFromStorage<T>(key: string, defaultValue: T): T {
@@ -88,7 +94,21 @@ export const DataStore = {
       if (!res.ok) return false;
       const json = await res.json();
       if (json.success && json.isCloud && json.data) {
-        const { config, users, members, savings, loans, installments, audit_logs, products, sales, perjalanan_dinas, pengawasan_notes } = json.data;
+        const {
+          config,
+          users,
+          members,
+          savings,
+          loans,
+          installments,
+          audit_logs,
+          products,
+          sales,
+          perjalanan_dinas,
+          pengawasan_notes,
+          penyertaan_modal,
+          pengeluaran_barang,
+        } = json.data;
         if (config) setToStorage(STORAGE_KEYS.CONFIG, config);
         if (users) setToStorage(STORAGE_KEYS.USERS, users);
         if (members) setToStorage(STORAGE_KEYS.MEMBERS, members);
@@ -100,6 +120,8 @@ export const DataStore = {
         if (sales) setToStorage(STORAGE_KEYS.SALES, sales);
         if (perjalanan_dinas) setToStorage(STORAGE_KEYS.PERJALANAN_DINAS, perjalanan_dinas);
         if (pengawasan_notes) setToStorage(STORAGE_KEYS.PENGAWASAN_NOTES, pengawasan_notes);
+        if (penyertaan_modal) setToStorage(STORAGE_KEYS.PENYERTAAN_MODAL, penyertaan_modal);
+        if (pengeluaran_barang) setToStorage(STORAGE_KEYS.PENGELUARAN_BARANG, pengeluaran_barang);
 
         // Beritahu komponen UI bahwa data cloud terbaru sudah dimuat
         window.dispatchEvent(new Event("kopdes-data-synced"));
@@ -579,17 +601,69 @@ export const DataStore = {
     return true;
   },
 
+  // --- PENYERTAAN MODAL (PEMERINTAH / DESA / PIHAK KETIGA) ---
+  getPenyertaanModal(): PenyertaanModal[] {
+    return getFromStorage(STORAGE_KEYS.PENYERTAAN_MODAL, initialPenyertaanModal);
+  },
+  addPenyertaanModal(pm: PenyertaanModal): void {
+    const list = this.getPenyertaanModal();
+    list.unshift(pm);
+    setToStorage(STORAGE_KEYS.PENYERTAAN_MODAL, list);
+    pushToCloud("penyertaan_modal", list);
+
+    this.addAuditLog(
+      "PENYERTAAN_MODAL_MASUK",
+      `Penyertaan Modal Masuk Rp ${pm.nominal.toLocaleString("id-ID")} dari ${pm.sumber} (${pm.peruntukan})`,
+      { id: "usr-penerima", name: pm.penerima, role: "BENDAHARA" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+  deletePenyertaanModal(id: string): void {
+    const list = this.getPenyertaanModal().filter((p) => p.id !== id);
+    setToStorage(STORAGE_KEYS.PENYERTAAN_MODAL, list);
+    pushToCloud("penyertaan_modal", list);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+
+  // --- PENGELUARAN / BELANJA BARANG & ASET TOKO ---
+  getPengeluaranBarang(): PengeluaranBarang[] {
+    return getFromStorage(STORAGE_KEYS.PENGELUARAN_BARANG, initialPengeluaranBarang);
+  },
+  addPengeluaranBarang(pb: PengeluaranBarang): void {
+    const list = this.getPengeluaranBarang();
+    list.unshift(pb);
+    setToStorage(STORAGE_KEYS.PENGELUARAN_BARANG, list);
+    pushToCloud("pengeluaran_barang", list);
+
+    this.addAuditLog(
+      "PENGELUARAN_BELANJA_BARANG",
+      `Belanja [${pb.kategori}]: ${pb.namaBarang} (${pb.jumlah} ${pb.satuan}) total Rp ${pb.totalBiaya.toLocaleString("id-ID")} dari ${pb.supplier}`,
+      { id: "usr-petugas", name: pb.petugas, role: "BENDAHARA" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+  deletePengeluaranBarang(id: string): void {
+    const list = this.getPengeluaranBarang().filter((p) => p.id !== id);
+    setToStorage(STORAGE_KEYS.PENGELUARAN_BARANG, list);
+    pushToCloud("pengeluaran_barang", list);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+
   // RESET
   resetAll(): void {
     if (typeof window === "undefined") return;
-    localStorage.removeItem(STORAGE_KEYS.USERS);
-    localStorage.removeItem(STORAGE_KEYS.MEMBERS);
-    localStorage.removeItem(STORAGE_KEYS.SAVINGS);
-    localStorage.removeItem(STORAGE_KEYS.LOANS);
-    localStorage.removeItem(STORAGE_KEYS.INSTALLMENTS);
-    localStorage.removeItem(STORAGE_KEYS.CONFIG);
-    localStorage.removeItem(STORAGE_KEYS.LOGS);
-    localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
-    localStorage.removeItem(STORAGE_KEYS.SALES);
+    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
   },
 };

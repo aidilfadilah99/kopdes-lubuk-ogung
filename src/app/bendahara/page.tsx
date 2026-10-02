@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -52,10 +52,15 @@ import {
   Briefcase,
 } from "lucide-react";
 import { RpReceipt, RpBanknote } from "@/components/RupiahIcons";
+import { PenyertaanModalSection } from "@/components/PenyertaanModalSection";
+import { PengeluaranBarangSection } from "@/components/PengeluaranBarangSection";
+import { Landmark } from "lucide-react";
 
 function BendaharaDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "sppd" | "bku" | "neraca">("setoran");
+  const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "sppd" | "modal" | "belanja" | "bku" | "neraca">("setoran");
+  const [penyertaanModalList, setPenyertaanModalList] = useState<any[]>([]);
+  const [pengeluaranBarangList, setPengeluaranBarangList] = useState<any[]>([]);
 
   // State data
   const [members, setMembers] = useState<Member[]>([]);
@@ -109,9 +114,11 @@ function BendaharaDashboardContent() {
     setInstallments(DataStore.getInstallments());
     setSales(DataStore.getSales());
     setSppdList(DataStore.getPerjalananDinas());
+    setPenyertaanModalList(DataStore.getPenyertaanModal());
+    setPengeluaranBarangList(DataStore.getPengeluaranBarang());
   };
 
-  const handleTabSwitch = (tab: "setoran" | "pencairan" | "angsuran" | "sppd" | "bku" | "neraca") => {
+  const handleTabSwitch = (tab: "setoran" | "pencairan" | "angsuran" | "sppd" | "modal" | "belanja" | "bku" | "neraca") => {
     setActiveTab(tab);
     if (typeof window !== "undefined") {
       const url = tab === "setoran" ? "/bendahara" : `/bendahara?tab=${tab}`;
@@ -135,6 +142,10 @@ function BendaharaDashboardContent() {
         setActiveTab("neraca");
       } else if (tab === "bku") {
         setActiveTab("bku");
+      } else if (tab === "modal" || tab === "penyertaan-modal") {
+        setActiveTab("modal");
+      } else if (tab === "belanja" || tab === "pembelian-barang") {
+        setActiveTab("belanja");
       } else if (tab === "sppd" || tab === "perjalanan-dinas") {
         setActiveTab("sppd");
       } else if (tab === "pencairan") {
@@ -214,11 +225,11 @@ function BendaharaDashboardContent() {
   const handleSubmitSavingsForm = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember) {
-      notify("⚠️ Harap pilih anggota terlebih dahulu.");
+      notify("âš ï¸ Harap pilih anggota terlebih dahulu.");
       return;
     }
     if (depositAmount <= 0) {
-      notify("⚠️ Nominal transaksi harus lebih besar dari Rp 0.");
+      notify("âš ï¸ Nominal transaksi harus lebih besar dari Rp 0.");
       return;
     }
 
@@ -263,7 +274,7 @@ function BendaharaDashboardContent() {
     } else {
       // PENARIKAN SIMPANAN SUKARELA (KAS KELUAR) - ROLE RISK MANAGEMENT
       if (depositAmount > memberSavingsBreakdown.sukarela) {
-        notify(`⚠️ Saldo simpanan sukarela tidak mencukupi! Saldo sukarela ${selectedMember.name} hanya ${formatRupiah(memberSavingsBreakdown.sukarela)}. Simpanan pokok & wajib tidak dapat ditarik.`);
+        notify(`âš ï¸ Saldo simpanan sukarela tidak mencukupi! Saldo sukarela ${selectedMember.name} hanya ${formatRupiah(memberSavingsBreakdown.sukarela)}. Simpanan pokok & wajib tidak dapat ditarik.`);
         return;
       }
 
@@ -419,7 +430,7 @@ function BendaharaDashboardContent() {
     const phone = member?.phone || "";
     const cleanPhone = phone.replace(/\D/g, "");
     if (!cleanPhone || cleanPhone === "0" || phone === "-") {
-      notify(`⚠️ Nomor HP/WhatsApp anggota ${ins.memberName} belum terdaftar.`);
+      notify(`âš ï¸ Nomor HP/WhatsApp anggota ${ins.memberName} belum terdaftar.`);
       return;
     }
     const finalPhone = cleanPhone.startsWith("0") ? "62" + cleanPhone.slice(1) : cleanPhone;
@@ -525,9 +536,37 @@ function BendaharaDashboardContent() {
       }
     });
 
+    // 6. Penyertaan Modal Masuk
+    penyertaanModalList.forEach((pm: any) => {
+      list.push({
+        id: pm.nomorReferensi || pm.id,
+        date: pm.tanggal,
+        type: "IN",
+        category: `Penyertaan Modal (${pm.kategori})`,
+        description: `${pm.peruntukan} - Sumber: ${pm.sumber}`,
+        member: pm.sumber,
+        amount: pm.nominal,
+        officer: pm.penerima || "Bendahara",
+      });
+    });
+
+    // 7. Pengeluaran Pembelian Barang / Aset
+    pengeluaranBarangList.forEach((pb: any) => {
+      list.push({
+        id: pb.nomorBukti || pb.id,
+        date: pb.tanggal,
+        type: "OUT",
+        category: `Belanja ${pb.kategori === "ASET_INVENTARIS" ? "Aset/Peralatan" : pb.kategori === "KULAKAN_TOKO" ? "Kulakan Mart" : "Operasional"}`,
+        description: `${pb.namaBarang} (${pb.jumlah} ${pb.satuan}) - Supplier: ${pb.supplier}`,
+        member: pb.supplier,
+        amount: pb.totalBiaya,
+        officer: pb.petugas || "Bendahara",
+      });
+    });
+
     // Urutkan dari terbaru
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [savings, installments, loans, sales, sppdList]);
+  }, [savings, installments, loans, sales, sppdList, penyertaanModalList, pengeluaranBarangList]);
 
   // Rekonsiliasi Kas Hari Ini
   const todayIn = bkuTransactions
@@ -659,6 +698,30 @@ function BendaharaDashboardContent() {
         >
           <CalendarCheck className="w-4 h-4" />
           Terima Angsuran ({pendingInstallments.length})
+        </button>
+
+        <button
+          onClick={() => handleTabSwitch("modal")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "modal"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Landmark className="w-4 h-4" />
+          Penyertaan Modal ({penyertaanModalList.length})
+        </button>
+
+        <button
+          onClick={() => handleTabSwitch("belanja")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "belanja"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          Belanja Barang & Aset ({pengeluaranBarangList.length})
         </button>
 
         <button
@@ -846,7 +909,7 @@ function BendaharaDashboardContent() {
                 </span>
                 {transactionMode === "PENARIKAN" && selectedMember && depositAmount > memberSavingsBreakdown.sukarela && (
                   <p className="text-red-500 text-[11px] mt-1 font-semibold">
-                    ⚠️ Melebihi saldo sukarela (Maks: {formatRupiah(memberSavingsBreakdown.sukarela)})
+                    âš ï¸ Melebihi saldo sukarela (Maks: {formatRupiah(memberSavingsBreakdown.sukarela)})
                   </p>
                 )}
               </div>
@@ -1239,7 +1302,7 @@ function BendaharaDashboardContent() {
                 <div className="mt-3.5 pt-2.5 border-t border-indigo-200 space-y-1.5 text-[11px] text-indigo-950">
                   <div className="flex items-center justify-between">
                     <span className="text-indigo-800">Status Brankas:</span>
-                    <span className="font-bold text-emerald-700">✓ Fisik Wajib Klop</span>
+                    <span className="font-bold text-emerald-700">âœ“ Fisik Wajib Klop</span>
                   </div>
                   <p className="text-[10px] text-indigo-700/90 leading-tight">
                     Selisih mutasi fisik uang tunai yang wajib ada di loket & brankas sebelum penutupan kas hari ini.
@@ -1346,6 +1409,22 @@ function BendaharaDashboardContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB PENYERTAAN MODAL (BENDAHARA) */}
+      {activeTab === "modal" && (
+        <PenyertaanModalSection
+          userRole="BENDAHARA"
+          userName={currentUser?.name || "Bendahara"}
+        />
+      )}
+
+      {/* TAB BELANJA BARANG & ASET (BENDAHARA) */}
+      {activeTab === "belanja" && (
+        <PengeluaranBarangSection
+          userRole="BENDAHARA"
+          userName={currentUser?.name || "Bendahara"}
+        />
       )}
 
       {/* TAB PENCAIRAN SPPD (BENDAHARA) */}
@@ -1466,3 +1545,4 @@ export default function BendaharaDashboard() {
     </ProtectedRoute>
   );
 }
+

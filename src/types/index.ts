@@ -243,3 +243,44 @@ export interface PengawasanNote {
   rekomendasi: string;
   status: 'TERBUKA' | 'DITINDAKLANJUTI' | 'SELESAI';
 }
+
+// --- PENYERTAAN MODAL (PEMERINTAH / DESA / PIHAK KETIGA) ---
+export type KategoriPenyertaanModal = 'PEMERINTAH' | 'DESA' | 'HIBAH_CSR' | 'PIHAK_KETIGA' | 'LAINNYA';
+
+export interface PenyertaanModal {
+  id: string;
+  nomorReferensi: string; // misal: "PM-2026-001"
+  sumber: string; // misal: "Pemerintah Desa Lubuk Ogung (APBDes)", "Kemendesa PDTT", "Hibah CSR"
+  kategori: KategoriPenyertaanModal;
+  nominal: number;
+  tanggal: string;
+  peruntukan: string; // misal: "Modal Awal Pembangunan Gedung & Toko Mart"
+  buktiDokumen?: string;
+  penerima: string; // Nama Master / Bendahara / Manager yang mencatat
+  metode: 'TRANSFER_BANK' | 'KAS_TUNAI';
+  catatan?: string;
+  status: 'DITERIMA';
+}
+
+// --- PENGELUARAN / PEMBELIAN BARANG & OPERASIONAL ---
+export type KategoriPengeluaran = 
+  | 'ASET_INVENTARIS'     // Belanja Aset Tetap (Peralatan, Rak Toko, Freezer, Komputer, Brankas)
+  | 'KULAKAN_TOKO'        // Belanja Pengadaan / Kulakan Stok Barang Kopdes Mart
+  | 'OPERASIONAL_KANTOR'; // Belanja Operasional, ATK, Listrik, Konsumsi
+
+export interface PengeluaranBarang {
+  id: string;
+  nomorBukti: string; // misal: "BKK-2026-001"
+  tanggal: string;
+  kategori: KategoriPengeluaran;
+  namaBarang: string; // misal: "Pengadaan 1 Unit Freezer Toko 300L", "Kulakan Minyakita 50 Karton"
+  jumlah: number;
+  satuan: string; // "unit", "karton", "sak", "paket", "pcs"
+  hargaSatuan: number;
+  totalBiaya: number;
+  supplier: string; // misal: "Distributor Sembako Pekanbaru", "Toko Elektronik Pelalawan"
+  metodePembayaran: 'KAS_TUNAI' | 'TRANSFER_BANK';
+  petugas: string; // Nama petugas pencatat
+  keterangan?: string;
+  buktiNota?: string;
+}

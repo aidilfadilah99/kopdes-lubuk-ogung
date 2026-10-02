@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -23,6 +23,8 @@ import {
   BarChart3,
   Briefcase,
   ShieldCheck,
+  Landmark,
+  ShoppingBag,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -119,6 +121,8 @@ export default function Header() {
         ...(currentUser.role === "MASTER"
           ? [
               { href: "/master", label: "Dashboard Master", icon: LayoutDashboard },
+              { href: "/master?tab=modal", label: "Penyertaan Modal", icon: Landmark },
+              { href: "/master?tab=belanja", label: "Belanja Barang", icon: ShoppingBag },
               { href: "/master?tab=sppd", label: "SPPD Dinas", icon: Briefcase },
               { href: "/master?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
             ]
@@ -145,6 +149,8 @@ export default function Header() {
         ...(currentUser.role === "BENDAHARA"
           ? [
               { href: "/bendahara", label: "Loket Keuangan", icon: Wallet },
+              { href: "/bendahara?tab=modal", label: "Penyertaan Modal", icon: Landmark },
+              { href: "/bendahara?tab=belanja", label: "Belanja Barang", icon: ShoppingBag },
               { href: "/bendahara?tab=sppd", label: "Pencairan SPPD", icon: Briefcase },
               { href: "/bendahara?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
             ]
@@ -361,3 +367,4 @@ export default function Header() {
     </header>
   );
 }
+

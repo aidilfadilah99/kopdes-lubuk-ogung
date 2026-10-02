@@ -38,11 +38,14 @@ import {
 } from "lucide-react";
 import { RpBadge } from "@/components/RupiahIcons";
 import { NeracaKeuangan } from "@/components/NeracaKeuangan";
+import { PenyertaanModalSection } from "@/components/PenyertaanModalSection";
+import { PengeluaranBarangSection } from "@/components/PengeluaranBarangSection";
+import { Landmark, ShoppingBag } from "lucide-react";
 import { PerjalananDinasModule } from "@/components/PerjalananDinasModule";
 
 function MasterDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"approval" | "users" | "sppd" | "neraca" | "config" | "logs">("approval");
+  const [activeTab, setActiveTab] = useState<"approval" | "users" | "sppd" | "modal" | "belanja" | "neraca" | "config" | "logs">("approval");
   
   // Data state
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -78,7 +81,7 @@ function MasterDashboardContent() {
     setLogs(DataStore.getAuditLogs());
   };
 
-  const handleTabSwitch = (tab: "approval" | "users" | "sppd" | "neraca" | "config" | "logs") => {
+  const handleTabSwitch = (tab: "approval" | "users" | "sppd" | "modal" | "belanja" | "neraca" | "config" | "logs") => {
     setActiveTab(tab);
     if (typeof window !== "undefined") {
       const url = tab === "approval" ? "/master" : `/master?tab=${tab}`;
@@ -306,6 +309,30 @@ function MasterDashboardContent() {
         >
           <Briefcase className="w-4 h-4" />
           Perjalanan Dinas (SPPD)
+        </button>
+
+        <button
+          onClick={() => handleTabSwitch("modal")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "modal"
+              ? "bg-red-600 text-white shadow-md shadow-red-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Landmark className="w-4 h-4" />
+          Penyertaan Modal
+        </button>
+
+        <button
+          onClick={() => handleTabSwitch("belanja")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "belanja"
+              ? "bg-red-600 text-white shadow-md shadow-red-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          Belanja Barang & Aset
         </button>
 
         <button
@@ -607,6 +634,22 @@ function MasterDashboardContent() {
         <PerjalananDinasModule
           userRole="MASTER"
           currentUserName={currentUser.name}
+        />
+      )}
+
+      {/* TAB PENYERTAAN MODAL (MASTER) */}
+      {activeTab === "modal" && (
+        <PenyertaanModalSection
+          userRole="MASTER"
+          userName={currentUser.name}
+        />
+      )}
+
+      {/* TAB BELANJA BARANG & ASET (MASTER) */}
+      {activeTab === "belanja" && (
+        <PengeluaranBarangSection
+          userRole="MASTER"
+          userName={currentUser.name}
         />
       )}
 
@@ -1032,5 +1075,6 @@ export default function MasterDashboard() {
     </ProtectedRoute>
   );
 }
+
 
 
