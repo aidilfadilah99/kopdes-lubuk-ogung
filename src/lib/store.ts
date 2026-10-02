@@ -88,7 +88,7 @@ export const DataStore = {
       if (!res.ok) return false;
       const json = await res.json();
       if (json.success && json.isCloud && json.data) {
-        const { config, users, members, savings, loans, installments, audit_logs, products, sales } = json.data;
+        const { config, users, members, savings, loans, installments, audit_logs, products, sales, perjalanan_dinas, pengawasan_notes } = json.data;
         if (config) setToStorage(STORAGE_KEYS.CONFIG, config);
         if (users) setToStorage(STORAGE_KEYS.USERS, users);
         if (members) setToStorage(STORAGE_KEYS.MEMBERS, members);
@@ -98,6 +98,8 @@ export const DataStore = {
         if (audit_logs) setToStorage(STORAGE_KEYS.LOGS, audit_logs);
         if (products) setToStorage(STORAGE_KEYS.PRODUCTS, products);
         if (sales) setToStorage(STORAGE_KEYS.SALES, sales);
+        if (perjalanan_dinas) setToStorage(STORAGE_KEYS.PERJALANAN_DINAS, perjalanan_dinas);
+        if (pengawasan_notes) setToStorage(STORAGE_KEYS.PENGAWASAN_NOTES, pengawasan_notes);
 
         // Beritahu komponen UI bahwa data cloud terbaru sudah dimuat
         window.dispatchEvent(new Event("kopdes-data-synced"));

@@ -10,6 +10,8 @@ import {
   initialAuditLogs,
   initialProducts,
   initialSales,
+  initialPerjalananDinas,
+  initialPengawasanNotes,
 } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +26,8 @@ const SEED_DATA: Record<string, any> = {
   audit_logs: initialAuditLogs,
   products: initialProducts,
   sales: initialSales,
+  perjalanan_dinas: initialPerjalananDinas,
+  pengawasan_notes: initialPengawasanNotes,
 };
 
 export async function GET(req: Request) {
