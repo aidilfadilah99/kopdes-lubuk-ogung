@@ -53,7 +53,10 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const totalPokok = savings.filter((s) => s.type === "POKOK").reduce((sum, s) => sum + s.amount, 0);
   const totalWajib = savings.filter((s) => s.type === "WAJIB").reduce((sum, s) => sum + s.amount, 0);
   const totalSukarela = savings.filter((s) => s.type === "SUKARELA").reduce((sum, s) => sum + s.amount, 0);
+  const totalPenarikanSukarela = savings.filter((s) => s.type === "PENARIKAN_SUKARELA").reduce((sum, s) => sum + s.amount, 0);
   const totalSimpananMasuk = totalPokok + totalWajib + totalSukarela;
+  // Simpanan neto = masuk - keluar (penarikan sukarela)
+  const totalSimpananNeto = totalSimpananMasuk - totalPenarikanSukarela;
 
   const totalPinjamanDisbursed = loans
     .filter((l) => l.status === "DISBURSED" || l.status === "PAID_OFF")
@@ -70,10 +73,11 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const countAnggota = sales.filter((s) => s.buyerType === "ANGGOTA").length;
 
   // Baseline kas operasional awal desa
+  // Formula identik dengan Transparansi: basline + simpananNeto - pencairan + angsuran + penjualanMart
   const baselineKasAwal = 35000000;
   const kasTotalOperasional = Math.max(
     18500000,
-    baselineKasAwal + totalSimpananMasuk - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart
+    baselineKasAwal + totalSimpananNeto - totalPinjamanDisbursed + totalAngsuranDiterima + totalPenjualanMart
   );
   const kasTunaiKasirLoket = Math.round(kasTotalOperasional * 0.3);
   const kasBankRiauKepri = kasTotalOperasional - kasTunaiKasirLoket;
@@ -92,17 +96,17 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const totalAsetLancar =
     kasTotalOperasional + piutangPokokPinjaman + piutangJasaBungaEstimasi + nilaiPersediaanStokHPP;
 
-  // 4. Aset Tetap / Peralatan
+  // 4. Aset Tetap / Peralatan (22jt perolehan - 3.5jt penyusutan = 18.5jt buku)
   const nilaiPerolehanPeralatan = 22000000; // Komputer POS, Barcode scanner, Rak etalase toko, Brankas
   const akumulasiPenyusutanPeralatan = 3500000;
-  const nilaiBukuAsetTetap = nilaiPerolehanPeralatan - akumulasiPenyusutanPeralatan;
+  const nilaiBukuAsetTetap = nilaiPerolehanPeralatan - akumulasiPenyusutanPeralatan; // = 18.500.000
 
   // TOTAL AKTIVA
   const totalAktiva = totalAsetLancar + nilaiBukuAsetTetap;
 
   // --- PERHITUNGAN PASIVA (KEWAJIBAN & EKUITAS) ---
   // 1. Kewajiban Jangka Pendek
-  const kewajibanSimpananSukarela = totalSukarela; // Dana titipan sukarela dapat ditarik anggota kapan saja
+  const kewajibanSimpananSukarela = totalSukarela - totalPenarikanSukarela; // Saldo sukarela neto = kewajiban titipan yang masih ada
   const hutangUsahaSupplierMart = 4500000; // Kulakan konsinyasi sembako belum jatuh tempo
   const totalKewajiban = kewajibanSimpananSukarela + hutangUsahaSupplierMart;
 
@@ -123,16 +127,18 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const selisihNeraca = totalAktiva - totalPasiva;
 
   // --- PERHITUNGAN SHU & PEMBAGIAN (AD/ART) ---
-  const alokasiCadangan = Math.round(shuTahunBerjalan * 0.4); // 40%
-  const alokasiJasaModal = Math.round(shuTahunBerjalan * 0.25); // 25%
-  const alokasiJasaUsaha = Math.round(shuTahunBerjalan * 0.2); // 20%
-  const alokasiPengurus = Math.round(shuTahunBerjalan * 0.1); // 10%
-  const alokasiSosialDesa = Math.round(shuTahunBerjalan * 0.05); // 5%
+  // SELARAS dengan Transparansi: 40% anggota + 40% cadangan + 10% pengurus + 5% sosial + 5% pendidikan
+  const alokasiJasaAnggota = Math.round(shuTahunBerjalan * 0.4);  // 40% kembali ke warga anggota
+  const alokasiCadangan    = Math.round(shuTahunBerjalan * 0.4);  // 40% dana cadangan modal koperasi
+  const alokasiPengurus    = Math.round(shuTahunBerjalan * 0.1);  // 10% jasa pengurus & pengawas
+  const alokasiSosialDesa  = Math.round(shuTahunBerjalan * 0.05); // 5% dana sosial desa
+  const alokasiPendidikan  = Math.round(shuTahunBerjalan * 0.05); // 5% pelatihan & pendidikan
 
   // --- RASIO KESEHATAN KEUANGAN ---
   const currentRatio = totalKewajiban > 0 ? (totalAsetLancar / totalKewajiban) * 100 : 999;
   const solvencyRatio = totalPasiva > 0 ? (totalAktiva / totalKewajiban) * 100 : 999;
   const roeRatio = totalEkuitas > 0 ? (shuTahunBerjalan / totalEkuitas) * 100 : 0;
+
 
   return (
     <div className="space-y-6 print:m-0 print:p-0">
@@ -541,7 +547,23 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
-          {/* Pos 1 */}
+          {/* Pos 1: 40% Dibagikan ke Warga Anggota */}
+          <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900 mb-1">
+                <span>Jasa Anggota</span>
+                <span className="bg-emerald-200 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-mono">40%</span>
+              </div>
+              <p className="text-[11px] text-emerald-700/80 leading-relaxed">
+                Kembali ke kantong warga — proporsional simpanan & belanja di Kopdes Mart
+              </p>
+            </div>
+            <div className="mt-3 pt-2 border-t border-emerald-100 font-mono font-black text-emerald-900 text-sm">
+              {formatRupiah(alokasiJasaAnggota)}
+            </div>
+          </div>
+
+          {/* Pos 2: 40% Cadangan Koperasi */}
           <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between text-xs font-bold text-blue-900 mb-1">
@@ -549,7 +571,7 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
                 <span className="bg-blue-200 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-mono">40%</span>
               </div>
               <p className="text-[11px] text-blue-700/80 leading-relaxed">
-                Penguatan modal usaha & mitigasi risiko operasional
+                Penguatan modal desa & mitigasi risiko operasional jangka panjang
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-blue-100 font-mono font-black text-blue-900 text-sm">
@@ -557,39 +579,7 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
             </div>
           </div>
 
-          {/* Pos 2 */}
-          <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/50 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-900 mb-1">
-                <span>Jasa Modal Anggota</span>
-                <span className="bg-emerald-200 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-mono">25%</span>
-              </div>
-              <p className="text-[11px] text-emerald-700/80 leading-relaxed">
-                Dividen dibagikan proporsional besar simpanan anggota
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-emerald-100 font-mono font-black text-emerald-900 text-sm">
-              {formatRupiah(alokasiJasaModal)}
-            </div>
-          </div>
-
-          {/* Pos 3 */}
-          <div className="p-4 rounded-xl border border-teal-100 bg-teal-50/50 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between text-xs font-bold text-teal-900 mb-1">
-                <span>Jasa Usaha Anggota</span>
-                <span className="bg-teal-200 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-mono">20%</span>
-              </div>
-              <p className="text-[11px] text-teal-700/80 leading-relaxed">
-                Bonus pembelanjaan sembako mart & keaktifan angsuran
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-teal-100 font-mono font-black text-teal-900 text-sm">
-              {formatRupiah(alokasiJasaUsaha)}
-            </div>
-          </div>
-
-          {/* Pos 4 */}
+          {/* Pos 3: 10% Pengurus & Pengawas */}
           <div className="p-4 rounded-xl border border-purple-100 bg-purple-50/50 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between text-xs font-bold text-purple-900 mb-1">
@@ -597,7 +587,7 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
                 <span className="bg-purple-200 text-purple-800 text-[10px] px-1.5 py-0.5 rounded font-mono">10%</span>
               </div>
               <p className="text-[11px] text-purple-700/80 leading-relaxed">
-                Tantiem / insentif dedikasi staf & pengurus harian
+                Tantiem & insentif dedikasi staf, pengurus, dan pengawas harian
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-purple-100 font-mono font-black text-purple-900 text-sm">
@@ -605,19 +595,35 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
             </div>
           </div>
 
-          {/* Pos 5 */}
+          {/* Pos 4: 5% Dana Sosial Desa */}
           <div className="p-4 rounded-xl border border-rose-100 bg-rose-50/50 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between text-xs font-bold text-rose-900 mb-1">
-                <span>Sosial & Pembangunan</span>
+                <span>Dana Sosial Desa</span>
                 <span className="bg-rose-200 text-rose-800 text-[10px] px-1.5 py-0.5 rounded font-mono">5%</span>
               </div>
               <p className="text-[11px] text-rose-700/80 leading-relaxed">
-                Bantuan sosial kemasyarakatan Desa Lubuk Ogung
+                Santunan yatim piatu, lansia dhuafa & musibah warga
               </p>
             </div>
             <div className="mt-3 pt-2 border-t border-rose-100 font-mono font-black text-rose-900 text-sm">
               {formatRupiah(alokasiSosialDesa)}
+            </div>
+          </div>
+
+          {/* Pos 5: 5% Pelatihan & Pendidikan */}
+          <div className="p-4 rounded-xl border border-amber-100 bg-amber-50/50 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold text-amber-900 mb-1">
+                <span>Pelatihan Warga</span>
+                <span className="bg-amber-200 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-mono">5%</span>
+              </div>
+              <p className="text-[11px] text-amber-700/80 leading-relaxed">
+                Penyuluhan sawit, UMKM ibu-ibu desa & studi banding pertanian
+              </p>
+            </div>
+            <div className="mt-3 pt-2 border-t border-amber-100 font-mono font-black text-amber-900 text-sm">
+              {formatRupiah(alokasiPendidikan)}
             </div>
           </div>
         </div>

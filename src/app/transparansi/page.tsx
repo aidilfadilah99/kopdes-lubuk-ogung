@@ -104,15 +104,18 @@ export default function TransparansiPublikPage() {
   const piutangJasaBungaEstimasi = Math.round(piutangPokokPinjaman * 0.08);
   const nilaiPersediaanStokHPP = products.reduce((sum, p) => sum + p.stock * p.costPrice, 0);
   const totalAsetLancar = totalKasBersihOperasional + piutangPokokPinjaman + piutangJasaBungaEstimasi + nilaiPersediaanStokHPP;
-  const nilaiBukuAsetTetap = 18500000; // Inventaris & peralatan operasional
+  const nilaiBukuAsetTetap = 18500000; // Inventaris & peralatan operasional (22jt - 3.5jt penyusutan)
   const totalAktiva = totalAsetLancar + nilaiBukuAsetTetap;
 
-  const totalKewajiban = totalSukarela + 4500000; // Simpanan sukarela titipan + hutang kulakan sembako
+  // Kewajiban: saldo sukarela neto (masuk - keluar) = titipan yang masih ada + hutang supplier
+  const saldoSukarelaNeto = totalSukarela - totalPenarikanSukarela;
+  const totalKewajiban = saldoSukarelaNeto + 4500000; // Saldo sukarela titipan + hutang kulakan sembako
   const modalPenyertaanDesa = 30000000;
   const cadanganKoperasi = 18000000;
 
   // SHU Bersih Berjalan Riil Tahun Ini
   const shuBersihBerjalan = totalAktiva - (totalKewajiban + totalPokok + totalWajib + modalPenyertaanDesa + cadanganKoperasi);
+
 
   // Alokasi SHU Berdasarkan Angka Riil Berjalan Sesuai AD/ART Koperasi
   const alokasiJasaAnggota = Math.round(shuBersihBerjalan * 0.40); // 40% kembali ke anggota
