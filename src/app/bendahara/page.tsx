@@ -12,6 +12,7 @@ import {
   Member,
   SavingsTransaction,
   SavingsType,
+  SaleTransaction,
 } from "@/types";
 import {
   formatDateIndo,
@@ -55,6 +56,7 @@ function BendaharaDashboardContent() {
   const [savings, setSavings] = useState<SavingsTransaction[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [installments, setInstallments] = useState<LoanInstallment[]>([]);
+  const [sales, setSales] = useState<SaleTransaction[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
   // Mode transaksi Loket Simpanan: SETORAN (Kas Masuk) vs PENARIKAN (Kas Keluar)
@@ -98,6 +100,7 @@ function BendaharaDashboardContent() {
     setSavings(DataStore.getSavings());
     setLoans(DataStore.getLoans());
     setInstallments(DataStore.getInstallments());
+    setSales(DataStore.getSales());
   };
 
   useEffect(() => {
@@ -443,9 +446,23 @@ function BendaharaDashboardContent() {
       }
     });
 
+    // 4. Penjualan Toko Kopdes Mart (Kas Masuk Kasir)
+    sales.forEach((s) => {
+      list.push({
+        id: s.invoiceNo,
+        date: s.date,
+        type: "IN",
+        category: `Mart (${s.buyerType === "ANGGOTA" ? "Anggota" : "Warga Umum"})`,
+        description: `Penjualan ${s.items.length} item barang (${s.paymentMethod}) - Pembeli: ${s.buyerType === "ANGGOTA" ? (s.memberName || "Anggota") : "Warga Umum"}`,
+        member: s.buyerType === "ANGGOTA" ? (s.memberName || "Anggota") : "Warga Umum",
+        amount: s.totalAmount,
+        officer: s.cashierName || "Kasir Mart",
+      });
+    });
+
     // Urutkan dari terbaru
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [savings, installments, loans]);
+  }, [savings, installments, loans, sales]);
 
   // Rekonsiliasi Kas Hari Ini
   const todayIn = bkuTransactions

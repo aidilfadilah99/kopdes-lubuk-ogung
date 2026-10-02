@@ -63,6 +63,10 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
     .reduce((sum, i) => sum + i.amount, 0);
 
   const totalPenjualanMart = sales.reduce((sum, s) => sum + s.totalAmount, 0);
+  const penjualanUmum = sales.filter((s) => s.buyerType === "UMUM").reduce((sum, s) => sum + s.totalAmount, 0);
+  const penjualanAnggota = sales.filter((s) => s.buyerType === "ANGGOTA").reduce((sum, s) => sum + s.totalAmount, 0);
+  const countUmum = sales.filter((s) => s.buyerType === "UMUM").length;
+  const countAnggota = sales.filter((s) => s.buyerType === "ANGGOTA").length;
 
   // Baseline kas operasional awal desa
   const baselineKasAwal = 35000000;
@@ -314,10 +318,13 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
                   <span className="font-mono">{formatRupiah(totalAsetLancar)}</span>
                 </div>
                 <div className="divide-y divide-slate-100 mt-2">
-                  <div className="py-2 flex items-center justify-between">
+                  <div className="py-2.5 flex items-center justify-between">
                     <div>
-                      <div className="font-semibold text-slate-800">1.1 Kas Tunai Kasir & Loket Bendahara</div>
-                      <div className="text-[10px] text-slate-400">Uang tunai operasional kasir mart & loket simpan pinjam</div>
+                      <div className="font-semibold text-slate-800">1.1 Kas Tunai Kasir Mart & Loket Bendahara</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5 space-y-0.5">
+                        <div>&bull; Kas Loket Simpan Pinjam: <span className="font-mono font-semibold text-slate-700">{formatRupiah(Math.max(0, kasTunaiKasirLoket - totalPenjualanMart))}</span></div>
+                        <div>&bull; Kas Penjualan Kopdes Mart: <span className="font-mono font-bold text-emerald-700">{formatRupiah(totalPenjualanMart)}</span> ({sales.length} transaksi belanja warga)</div>
+                      </div>
                     </div>
                     <span className="font-mono font-bold text-slate-700">{formatRupiah(kasTunaiKasirLoket)}</span>
                   </div>
@@ -592,6 +599,53 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
             <div className="mt-3 pt-2 border-t border-rose-100 font-mono font-black text-rose-900 text-sm">
               {formatRupiah(alokasiSosialDesa)}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* LAPORAN KONTRIBUSI PENJUALAN TOKO KOPDES MART */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-extrabold text-slate-900 text-base">
+                Laporan Kinerja Unit Usaha Belanja Kopdes Mart
+              </h3>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Penerimaan kas dan omzet hasil belanja warga umum & anggota koperasi yang masuk ke peredaran keuangan desa.
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-xs text-slate-400">Total Omzet Penjualan Mart:</span>
+            <div className="font-mono font-black text-base text-indigo-700">{formatRupiah(totalPenjualanMart)}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <span className="text-slate-500 block mb-1">Belanja dari Warga Umum</span>
+            <span className="text-lg font-black text-slate-900 font-mono">{formatRupiah(penjualanUmum)}</span>
+            <span className="text-[11px] text-slate-500 block mt-1">{countUmum} Transaksi Kasir</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200">
+            <span className="text-blue-800 font-semibold block mb-1">Belanja dari Anggota Koperasi</span>
+            <span className="text-lg font-black text-blue-900 font-mono">{formatRupiah(penjualanAnggota)}</span>
+            <span className="text-[11px] text-blue-700 block mt-1">{countAnggota} Transaksi (Diskon Khusus)</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
+            <span className="text-emerald-800 font-semibold block mb-1">Persediaan Stok Toko (HPP)</span>
+            <span className="text-lg font-black text-emerald-900 font-mono">{formatRupiah(nilaiPersediaanStokHPP)}</span>
+            <span className="text-[11px] text-emerald-700 block mt-1">{products.length} Jenis Barang Dagangan</span>
+          </div>
+
+          <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200">
+            <span className="text-amber-800 font-semibold block mb-1">Dampak ke Neraca & SHU</span>
+            <span className="text-xs font-bold text-amber-950 block mt-0.5">Otomatis Masuk Kas & SHU</span>
+            <span className="text-[11px] text-amber-800 block mt-1">Laba kotor penjualan memperkuat modal & SHU akhir tahun</span>
           </div>
         </div>
       </div>

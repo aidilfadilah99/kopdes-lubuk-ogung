@@ -410,6 +410,11 @@ export const DataStore = {
       `Penjualan ${sale.invoiceNo} Rp ${sale.totalAmount.toLocaleString("id-ID")} (${sale.buyerType === "ANGGOTA" ? sale.memberName : "Umum"}) - ${sale.paymentMethod}`,
       { id: "usr-cashier", name: sale.cashierName, role: sale.cashierRole }
     );
+
+    // Kirim notifikasi sync ke semua halaman (Neraca Keuangan, Bendahara, Dashboard)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
   },
 
   // RESET
