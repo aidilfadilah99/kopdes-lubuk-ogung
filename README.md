@@ -60,12 +60,6 @@ Aplikasi memiliki pembagian peran yang sangat tegas:
 | Peran | Nama Pejabat | Username | Password |
 |---|---|---|---|
 | **🔴 Master** | **Aidil Fadilah, S.T** | `aidil` | `kopdes2026` |
-| **🟣 Manager** | **Surya Pratama, S.E** | `manager` | `kopdes2026` |
-| **🔵 Admin** | **Rifaldo Almaghribi, S.T** | `rifaldo` | `kopdes2026` |
-| **🟢 Bendahara** | **Abil Syahdinu Pradiksa, S.T** | `abil` | `kopdes2026` |
-| **🛒 Kasir Mart** | **Siti Rahmawati** | `kasir` | `kopdes2026` |
-| **📦 Gudang Mart** | **Bambang Irawan** | `gudang` | `kopdes2026` |
-| **🟡 Anggota** | **Hassan** | `hassan` | `hassan123` |
 
 > Akun baru dapat dibuat dan dikelola oleh Master melalui dashboard Master.  
 > Password default anggota baru yang didaftarkan = **6 digit terakhir NIK**.

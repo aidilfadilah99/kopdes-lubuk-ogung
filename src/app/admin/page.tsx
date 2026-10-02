@@ -68,12 +68,32 @@ function AdminDashboardContent() {
   };
 
   // Handle Add Member
+  // Format No HP: strip semua non-digit lalu insert dash di posisi 4 dan 8
+  const formatPhone = (raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 13);
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 8) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8)}`;
+  };
+
   const handleAddMember = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
     if (!newMember.name || !newMember.nik) {
       notify("⚠️ Harap isi Nama Lengkap dan NIK warga dengan benar.");
       return;
+    }
+    const nikDigits = newMember.nik.replace(/\D/g, "");
+    if (nikDigits.length !== 16) {
+      notify("⚠️ NIK harus tepat 16 digit angka.");
+      return;
+    }
+    if (newMember.noKk) {
+      const kkDigits = newMember.noKk.replace(/\D/g, "");
+      if (kkDigits.length !== 16) {
+        notify("⚠️ Nomor KK harus tepat 16 digit angka.");
+        return;
+      }
     }
 
     const memberId = `mbr-${String(members.length + 1).padStart(3, "0")}`;
@@ -589,17 +609,32 @@ function AdminDashboardContent() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    NIK (Nomor Induk Kependudukan)
+                    NIK (Nomor Induk Kependudukan) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     required
                     maxLength={16}
-                    placeholder="140502xxxxxxxxxx"
+                    placeholder="16 digit angka"
                     value={newMember.nik}
-                    onChange={(e) => setNewMember({ ...newMember, nik: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                      setNewMember({ ...newMember, nik: digits });
+                    }}
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:ring-2 focus:outline-none font-mono ${
+                      newMember.nik && newMember.nik.length !== 16
+                        ? "border-red-400 focus:ring-red-400"
+                        : "border-slate-300 focus:ring-blue-500"
+                    }`}
                   />
+                  {newMember.nik.length > 0 && newMember.nik.length !== 16 && (
+                    <p className="text-red-500 text-[10px] mt-0.5">{newMember.nik.length}/16 digit — harus tepat 16 digit</p>
+                  )}
+                  {newMember.nik.length === 16 && (
+                    <p className="text-emerald-600 text-[10px] mt-0.5">✓ 16 digit</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -607,11 +642,27 @@ function AdminDashboardContent() {
                   </label>
                   <input
                     type="text"
-                    placeholder="140502xxxxxxxxxx"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={16}
+                    placeholder="16 digit angka"
                     value={newMember.noKk}
-                    onChange={(e) => setNewMember({ ...newMember, noKk: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 16);
+                      setNewMember({ ...newMember, noKk: digits });
+                    }}
+                    className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:ring-2 focus:outline-none font-mono ${
+                      newMember.noKk && newMember.noKk.length !== 16
+                        ? "border-red-400 focus:ring-red-400"
+                        : "border-slate-300 focus:ring-blue-500"
+                    }`}
                   />
+                  {newMember.noKk.length > 0 && newMember.noKk.length !== 16 && (
+                    <p className="text-red-500 text-[10px] mt-0.5">{newMember.noKk.length}/16 digit — harus tepat 16 digit</p>
+                  )}
+                  {newMember.noKk.length === 16 && (
+                    <p className="text-emerald-600 text-[10px] mt-0.5">✓ 16 digit</p>
+                  )}
                 </div>
               </div>
 
@@ -652,9 +703,10 @@ function AdminDashboardContent() {
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
                     placeholder="0812-xxxx-xxxx"
                     value={newMember.phone}
-                    onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                    onChange={(e) => setNewMember({ ...newMember, phone: formatPhone(e.target.value) })}
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
