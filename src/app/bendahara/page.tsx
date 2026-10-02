@@ -44,6 +44,9 @@ import {
   FileCheck,
   Building2,
   UserCheck,
+  ShoppingBag,
+  Store,
+  Users,
 } from "lucide-react";
 import { RpReceipt, RpBanknote } from "@/components/RupiahIcons";
 
@@ -469,8 +472,30 @@ function BendaharaDashboardContent() {
     .filter((t) => t.date.startsWith(todayStr) && t.type === "IN")
     .reduce((sum, t) => sum + t.amount, 0);
 
+  // Rincian Sumber Kas Masuk Hari Ini
+  const todayInMart = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "IN" && t.category.startsWith("Mart"))
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayInSimpanan = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "IN" && t.category.startsWith("Simpanan"))
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayInAngsuran = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "IN" && t.category === "Angsuran Pinjaman")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Rincian Pos Kas Keluar Hari Ini
   const todayOut = bkuTransactions
     .filter((t) => t.date.startsWith(todayStr) && t.type === "OUT")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayOutPencairan = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "OUT" && t.category === "Pencairan Pinjaman")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayOutPenarikan = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "OUT" && t.category === "Penarikan Sukarela")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const todayNet = todayIn - todayOut;
@@ -1033,25 +1058,110 @@ function BendaharaDashboardContent() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200">
-                <span className="text-emerald-800 font-semibold block mb-1">Total Kas Masuk Hari Ini (+)</span>
-                <span className="text-xl font-black text-emerald-700 font-mono">{formatRupiah(todayIn)}</span>
-                <p className="text-[10px] text-emerald-600 mt-1">Setoran simpanan & pembayaran cicilan angsuran</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              {/* KARTU 1: TOTAL KAS MASUK + RINCIAN SUMBER DANA */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex flex-col justify-between shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-emerald-800 font-bold text-xs uppercase tracking-wide">Total Kas Masuk Hari Ini (+)</span>
+                    <span className="text-[10px] bg-emerald-200/80 text-emerald-900 font-bold px-2 py-0.5 rounded-full">
+                      Penerimaan
+                    </span>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-emerald-700 font-mono block">
+                    {formatRupiah(todayIn)}
+                  </span>
+                </div>
+
+                {/* Sub-kategori Rincian Kas Masuk */}
+                <div className="mt-3.5 pt-2.5 border-t border-emerald-200 space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-900 flex items-center gap-1.5 font-medium">
+                      <ShoppingBag className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      Penjualan Kopdes Mart:
+                    </span>
+                    <span className="font-mono font-bold text-emerald-800">{formatRupiah(todayInMart)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-900 flex items-center gap-1.5 font-medium">
+                      <Wallet className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      Setoran Simpanan Warga:
+                    </span>
+                    <span className="font-mono font-bold text-emerald-800">{formatRupiah(todayInSimpanan)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-900 flex items-center gap-1.5 font-medium">
+                      <CalendarCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      Pembayaran Angsuran:
+                    </span>
+                    <span className="font-mono font-bold text-emerald-800">{formatRupiah(todayInAngsuran)}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-rose-50/70 border border-rose-200">
-                <span className="text-rose-800 font-semibold block mb-1">Total Kas Keluar Hari Ini (-)</span>
-                <span className="text-xl font-black text-rose-700 font-mono">-{formatRupiah(todayOut)}</span>
-                <p className="text-[10px] text-rose-600 mt-1">Pencairan pinjaman & penarikan simpanan sukarela</p>
+              {/* KARTU 2: TOTAL KAS KELUAR + RINCIAN PENGELUARAN */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-rose-50/70 border border-rose-200 flex flex-col justify-between shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-rose-800 font-bold text-xs uppercase tracking-wide">Total Kas Keluar Hari Ini (-)</span>
+                    <span className="text-[10px] bg-rose-200/80 text-rose-900 font-bold px-2 py-0.5 rounded-full">
+                      Pengeluaran
+                    </span>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-rose-700 font-mono block">
+                    -{formatRupiah(todayOut)}
+                  </span>
+                </div>
+
+                {/* Sub-kategori Rincian Kas Keluar */}
+                <div className="mt-3.5 pt-2.5 border-t border-rose-200 space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-rose-900 flex items-center gap-1.5 font-medium">
+                      <ArrowUpCircle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+                      Pencairan Pinjaman:
+                    </span>
+                    <span className="font-mono font-bold text-rose-800">-{formatRupiah(todayOutPencairan)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-rose-900 flex items-center gap-1.5 font-medium">
+                      <DollarSign className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+                      Penarikan Sukarela:
+                    </span>
+                    <span className="font-mono font-bold text-rose-800">-{formatRupiah(todayOutPenarikan)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <CreditCard className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      Pengeluaran Lainnya:
+                    </span>
+                    <span className="font-mono">Rp 0</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200">
-                <span className="text-indigo-800 font-semibold block mb-1">Net Cashflow Loket Hari Ini</span>
-                <span className={`text-xl font-black font-mono ${todayNet >= 0 ? "text-indigo-700" : "text-rose-700"}`}>
-                  {todayNet >= 0 ? `+${formatRupiah(todayNet)}` : `-${formatRupiah(Math.abs(todayNet))}`}
-                </span>
-                <p className="text-[10px] text-indigo-600 mt-1">Selisih mutasi kas fisik yang wajib ada di loket</p>
+              {/* KARTU 3: NET CASHFLOW / SALDO KAS FISIK LOKET */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col justify-between shadow-sm">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-indigo-800 font-bold text-xs uppercase tracking-wide">Net Cashflow Loket Hari Ini</span>
+                    <span className="text-[10px] bg-indigo-200/80 text-indigo-900 font-bold px-2 py-0.5 rounded-full">
+                      Posisi Kasir
+                    </span>
+                  </div>
+                  <span className={`text-xl sm:text-2xl font-black font-mono block ${todayNet >= 0 ? "text-indigo-700" : "text-rose-700"}`}>
+                    {todayNet >= 0 ? `+${formatRupiah(todayNet)}` : `-${formatRupiah(Math.abs(todayNet))}`}
+                  </span>
+                </div>
+
+                <div className="mt-3.5 pt-2.5 border-t border-indigo-200 space-y-1.5 text-[11px] text-indigo-950">
+                  <div className="flex items-center justify-between">
+                    <span className="text-indigo-800">Status Brankas:</span>
+                    <span className="font-bold text-emerald-700">✓ Fisik Wajib Klop</span>
+                  </div>
+                  <p className="text-[10px] text-indigo-700/90 leading-tight">
+                    Selisih mutasi fisik uang tunai yang wajib ada di loket & brankas sebelum penutupan kas hari ini.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
