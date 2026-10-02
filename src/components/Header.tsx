@@ -54,10 +54,60 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [config, setConfig] = useState<CooperativeConfig | null>(null);
+  const [currentTab, setCurrentTab] = useState<string>("");
 
   useEffect(() => {
     setConfig(DataStore.getConfig());
   }, []);
+
+  useEffect(() => {
+    const updateTabFromUrl = () => {
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        setCurrentTab(params.get("tab") || "");
+      }
+    };
+    updateTabFromUrl();
+
+    const handleCustomTab = (e: any) => {
+      setCurrentTab(e.detail?.tab ?? "");
+    };
+
+    window.addEventListener("popstate", updateTabTab);
+    window.addEventListener("kopdes-tab-change", handleCustomTab);
+    return () => {
+      window.removeEventListener("popstate", updateTabTab);
+      window.removeEventListener("kopdes-tab-change", handleCustomTab);
+    };
+    function updateTabTab() {
+      updateTabFromUrl();
+    }
+  }, [pathname]);
+
+  const isLinkActive = (href: string) => {
+    const [targetPath, targetQuery] = href.split("?");
+    if (pathname !== targetPath) return false;
+    if (!targetQuery) {
+      return !currentTab;
+    }
+    const params = new URLSearchParams(targetQuery);
+    return currentTab === params.get("tab");
+  };
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const [targetPath, targetQuery] = href.split("?");
+    if (pathname === targetPath) {
+      e.preventDefault();
+      const params = new URLSearchParams(targetQuery || "");
+      const targetTab = params.get("tab") || "";
+      setCurrentTab(targetTab);
+      window.history.pushState({}, "", href);
+      window.dispatchEvent(
+        new CustomEvent("kopdes-tab-change", { detail: { tab: targetTab } })
+      );
+    }
+    setMobileOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -150,14 +200,15 @@ export default function Header() {
             <nav className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
-                const active = pathname === link.href;
+                const active = isLinkActive(link.href);
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={(e) => handleNavClick(e, link.href)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       active
-                        ? "bg-red-50 text-red-700"
+                        ? "bg-red-50 text-red-700 font-semibold"
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     }`}
                   >
@@ -267,15 +318,15 @@ export default function Header() {
         <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-1">
           {navLinks.map((link) => {
             const Icon = link.icon;
-            const active = pathname === link.href;
+            const active = isLinkActive(link.href);
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMobileOpen(false)}
+                onClick={(e) => handleNavClick(e, link.href)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                   active
-                    ? "bg-red-50 text-red-700"
+                    ? "bg-red-50 text-red-700 font-semibold"
                     : "text-gray-700 hover:bg-gray-100"
                 }`}
               >

@@ -78,18 +78,59 @@ function MasterDashboardContent() {
     setLogs(DataStore.getAuditLogs());
   };
 
+  const handleTabSwitch = (tab: "approval" | "users" | "sppd" | "neraca" | "config" | "logs") => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = tab === "approval" ? "/master" : `/master?tab=${tab}`;
+      window.history.pushState({}, "", url);
+      window.dispatchEvent(
+        new CustomEvent("kopdes-tab-change", { detail: { tab: tab === "approval" ? "" : tab } })
+      );
+    }
+  };
+
   useEffect(() => {
     refreshData();
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("tab") === "neraca") {
-        setActiveTab("neraca");
-      } else if (params.get("tab") === "sppd" || params.get("tab") === "perjalanan-dinas") {
-        setActiveTab("sppd");
+
+    const syncTabFromUrl = (targetTab?: string) => {
+      let tab = targetTab;
+      if (typeof tab === "undefined" && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        tab = params.get("tab") || "";
       }
-    }
+      if (tab === "neraca") {
+        setActiveTab("neraca");
+      } else if (tab === "sppd" || tab === "perjalanan-dinas") {
+        setActiveTab("sppd");
+      } else if (tab === "users") {
+        setActiveTab("users");
+      } else if (tab === "config" || tab === "settings") {
+        setActiveTab("config");
+      } else if (tab === "logs") {
+        setActiveTab("logs");
+      } else {
+        setActiveTab("approval");
+      }
+    };
+
+    syncTabFromUrl();
+
+    const handleCustomTab = (e: any) => {
+      syncTabFromUrl(e.detail?.tab);
+    };
+
+    const handlePopState = () => {
+      syncTabFromUrl();
+    };
+
+    window.addEventListener("kopdes-tab-change", handleCustomTab);
+    window.addEventListener("popstate", handlePopState);
     window.addEventListener("kopdes-data-synced", refreshData);
-    return () => window.removeEventListener("kopdes-data-synced", refreshData);
+    return () => {
+      window.removeEventListener("kopdes-tab-change", handleCustomTab);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("kopdes-data-synced", refreshData);
+    };
   }, []);
 
   const notify = (msg: string) => {
@@ -227,7 +268,7 @@ function MasterDashboardContent() {
       {/* Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         <button
-          onClick={() => setActiveTab("approval")}
+          onClick={() => handleTabSwitch("approval")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "approval"
               ? "bg-red-600 text-white shadow-md shadow-red-500/20"
@@ -244,7 +285,7 @@ function MasterDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("users")}
+          onClick={() => handleTabSwitch("users")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "users"
               ? "bg-red-600 text-white shadow-md shadow-red-500/20"
@@ -256,7 +297,7 @@ function MasterDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("sppd")}
+          onClick={() => handleTabSwitch("sppd")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "sppd"
               ? "bg-red-600 text-white shadow-md shadow-red-500/20"
@@ -268,7 +309,7 @@ function MasterDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("neraca")}
+          onClick={() => handleTabSwitch("neraca")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "neraca"
               ? "bg-red-600 text-white shadow-md shadow-red-500/20"
@@ -280,7 +321,7 @@ function MasterDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("config")}
+          onClick={() => handleTabSwitch("config")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "config"
               ? "bg-red-600 text-white shadow-md shadow-red-500/20"
@@ -292,7 +333,7 @@ function MasterDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("logs")}
+          onClick={() => handleTabSwitch("logs")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "logs"
               ? "bg-red-600 text-white shadow-md shadow-red-500/20"

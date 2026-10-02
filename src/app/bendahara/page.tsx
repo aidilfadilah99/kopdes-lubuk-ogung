@@ -111,20 +111,59 @@ function BendaharaDashboardContent() {
     setSppdList(DataStore.getPerjalananDinas());
   };
 
+  const handleTabSwitch = (tab: "setoran" | "pencairan" | "angsuran" | "sppd" | "bku" | "neraca") => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = tab === "setoran" ? "/bendahara" : `/bendahara?tab=${tab}`;
+      window.history.pushState({}, "", url);
+      window.dispatchEvent(
+        new CustomEvent("kopdes-tab-change", { detail: { tab: tab === "setoran" ? "" : tab } })
+      );
+    }
+  };
+
   useEffect(() => {
     refreshData();
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("tab") === "neraca") {
-        setActiveTab("neraca");
-      } else if (params.get("tab") === "bku") {
-        setActiveTab("bku");
-      } else if (params.get("tab") === "sppd" || params.get("tab") === "perjalanan-dinas") {
-        setActiveTab("sppd");
+
+    const syncTabFromUrl = (targetTab?: string) => {
+      let tab = targetTab;
+      if (typeof tab === "undefined" && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        tab = params.get("tab") || "";
       }
-    }
+      if (tab === "neraca") {
+        setActiveTab("neraca");
+      } else if (tab === "bku") {
+        setActiveTab("bku");
+      } else if (tab === "sppd" || tab === "perjalanan-dinas") {
+        setActiveTab("sppd");
+      } else if (tab === "pencairan") {
+        setActiveTab("pencairan");
+      } else if (tab === "angsuran") {
+        setActiveTab("angsuran");
+      } else {
+        setActiveTab("setoran");
+      }
+    };
+
+    syncTabFromUrl();
+
+    const handleCustomTab = (e: any) => {
+      syncTabFromUrl(e.detail?.tab);
+    };
+
+    const handlePopState = () => {
+      syncTabFromUrl();
+    };
+
+    window.addEventListener("kopdes-tab-change", handleCustomTab);
+    window.addEventListener("popstate", handlePopState);
     window.addEventListener("kopdes-data-synced", refreshData);
-    return () => window.removeEventListener("kopdes-data-synced", refreshData);
+    return () => {
+      window.removeEventListener("kopdes-tab-change", handleCustomTab);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("kopdes-data-synced", refreshData);
+    };
   }, []);
 
   useEffect(() => {
@@ -582,7 +621,7 @@ function BendaharaDashboardContent() {
       {/* Tabs Navigasi Bendahara */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3 print:hidden">
         <button
-          onClick={() => setActiveTab("setoran")}
+          onClick={() => handleTabSwitch("setoran")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "setoran"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
@@ -594,7 +633,7 @@ function BendaharaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("pencairan")}
+          onClick={() => handleTabSwitch("pencairan")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "pencairan"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
@@ -611,7 +650,7 @@ function BendaharaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("angsuran")}
+          onClick={() => handleTabSwitch("angsuran")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "angsuran"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
@@ -623,7 +662,7 @@ function BendaharaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("bku")}
+          onClick={() => handleTabSwitch("bku")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "bku"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
@@ -635,7 +674,7 @@ function BendaharaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("sppd")}
+          onClick={() => handleTabSwitch("sppd")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "sppd"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
@@ -652,7 +691,7 @@ function BendaharaDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("neraca")}
+          onClick={() => handleTabSwitch("neraca")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "neraca"
               ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"

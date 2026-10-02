@@ -86,24 +86,51 @@ function PengawasDashboardContent() {
     setNotes(DataStore.getPengawasanNotes());
   };
 
+  const handleTabSwitch = (tab: string) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = tab === "audit" ? "/pengawas" : `/pengawas?tab=${tab}`;
+      window.history.pushState({}, "", url);
+      window.dispatchEvent(
+        new CustomEvent("kopdes-tab-change", { detail: { tab: tab === "audit" ? "" : tab } })
+      );
+    }
+  };
+
   useEffect(() => {
     refreshData();
-    window.addEventListener("kopdes-data-synced", refreshData);
-    return () => window.removeEventListener("kopdes-data-synced", refreshData);
-  }, []);
 
-  // Check URL query tab
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get("tab");
-      if (tabParam) {
-        if (tabParam === "neraca") setActiveTab("neraca");
-        if (tabParam === "perjalanan-dinas" || tabParam === "sppd") setActiveTab("sppd");
-        if (tabParam === "bku") setActiveTab("bku");
-        if (tabParam === "temuan") setActiveTab("temuan");
+    const syncTabFromUrl = (targetTab?: string) => {
+      let tab = targetTab;
+      if (typeof tab === "undefined" && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        tab = params.get("tab") || "";
       }
-    }
+      if (tab === "neraca") setActiveTab("neraca");
+      else if (tab === "perjalanan-dinas" || tab === "sppd") setActiveTab("sppd");
+      else if (tab === "bku") setActiveTab("bku");
+      else if (tab === "temuan") setActiveTab("temuan");
+      else setActiveTab("audit");
+    };
+
+    syncTabFromUrl();
+
+    const handleCustomTab = (e: any) => {
+      syncTabFromUrl(e.detail?.tab);
+    };
+
+    const handlePopState = () => {
+      syncTabFromUrl();
+    };
+
+    window.addEventListener("kopdes-tab-change", handleCustomTab);
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("kopdes-data-synced", refreshData);
+    return () => {
+      window.removeEventListener("kopdes-tab-change", handleCustomTab);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("kopdes-data-synced", refreshData);
+    };
   }, []);
 
   // --- KALKULASI ARUS KAS & INDIKATOR AUDIT ---
@@ -370,7 +397,7 @@ function PengawasDashboardContent() {
       {/* TAB NAVIGATION KHUSUS PENGAWAS */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         <button
-          onClick={() => setActiveTab("audit")}
+          onClick={() => handleTabSwitch("audit")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "audit"
               ? "bg-slate-900 text-white shadow-sm"
@@ -381,7 +408,7 @@ function PengawasDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("bku")}
+          onClick={() => handleTabSwitch("bku")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "bku"
               ? "bg-slate-900 text-white shadow-sm"
@@ -392,7 +419,7 @@ function PengawasDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("sppd")}
+          onClick={() => handleTabSwitch("sppd")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "sppd"
               ? "bg-slate-900 text-white shadow-sm"
@@ -403,7 +430,7 @@ function PengawasDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("neraca")}
+          onClick={() => handleTabSwitch("neraca")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "neraca"
               ? "bg-slate-900 text-white shadow-sm"
@@ -414,7 +441,7 @@ function PengawasDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("temuan")}
+          onClick={() => handleTabSwitch("temuan")}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
             activeTab === "temuan"
               ? "bg-emerald-700 text-white shadow-sm"

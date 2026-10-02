@@ -76,18 +76,50 @@ function AdminDashboardContent() {
     setLoans(DataStore.getLoans());
   };
 
+  const handleTabSwitch = (tab: "members" | "loans" | "sppd" | "neraca") => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = tab === "members" ? "/admin" : `/admin?tab=${tab}`;
+      window.history.pushState({}, "", url);
+      window.dispatchEvent(
+        new CustomEvent("kopdes-tab-change", { detail: { tab: tab === "members" ? "" : tab } })
+      );
+    }
+  };
+
   useEffect(() => {
     refreshData();
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("tab") === "neraca") {
-        setActiveTab("neraca");
-      } else if (params.get("tab") === "sppd" || params.get("tab") === "perjalanan-dinas") {
-        setActiveTab("sppd");
+
+    const syncTabFromUrl = (targetTab?: string) => {
+      let tab = targetTab;
+      if (typeof tab === "undefined" && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        tab = params.get("tab") || "";
       }
-    }
+      if (tab === "neraca") setActiveTab("neraca");
+      else if (tab === "sppd" || tab === "perjalanan-dinas") setActiveTab("sppd");
+      else if (tab === "loans") setActiveTab("loans");
+      else setActiveTab("members");
+    };
+
+    syncTabFromUrl();
+
+    const handleCustomTab = (e: any) => {
+      syncTabFromUrl(e.detail?.tab);
+    };
+
+    const handlePopState = () => {
+      syncTabFromUrl();
+    };
+
+    window.addEventListener("kopdes-tab-change", handleCustomTab);
+    window.addEventListener("popstate", handlePopState);
     window.addEventListener("kopdes-data-synced", refreshData);
-    return () => window.removeEventListener("kopdes-data-synced", refreshData);
+    return () => {
+      window.removeEventListener("kopdes-tab-change", handleCustomTab);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("kopdes-data-synced", refreshData);
+    };
   }, []);
 
   const notify = (msg: string) => {
@@ -397,7 +429,7 @@ function AdminDashboardContent() {
       {/* Quick Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         <button
-          onClick={() => setActiveTab("members")}
+          onClick={() => handleTabSwitch("members")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "members"
               ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
@@ -414,7 +446,7 @@ function AdminDashboardContent() {
         </button>
 
         <button
-          onClick={() => setActiveTab("loans")}
+          onClick={() => handleTabSwitch("loans")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
             activeTab === "loans"
               ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
@@ -432,7 +464,7 @@ function AdminDashboardContent() {
 
         {["MANAGER", "MASTER", "ADMIN"].includes(currentUser?.role ?? "") && (
           <button
-            onClick={() => setActiveTab("sppd")}
+            onClick={() => handleTabSwitch("sppd")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
               activeTab === "sppd"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
@@ -446,7 +478,7 @@ function AdminDashboardContent() {
 
         {["MANAGER", "MASTER"].includes(currentUser?.role ?? "") && (
           <button
-            onClick={() => setActiveTab("neraca")}
+            onClick={() => handleTabSwitch("neraca")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
               activeTab === "neraca"
                 ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
