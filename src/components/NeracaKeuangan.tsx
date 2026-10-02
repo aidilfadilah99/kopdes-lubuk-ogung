@@ -83,10 +83,16 @@ export function NeracaKeuangan({ userRole = "MASTER" }: NeracaKeuanganProps) {
   const kasBankRiauKepri = kasTotalOperasional - kasTunaiKasirLoket;
 
   // 2. Piutang Pinjaman Anggota
+  // Piutang pokok = sisa pinjaman aktif (DISBURSED) yang belum dilunasi
   const piutangPokokPinjaman = loans
     .filter((l) => l.status === "DISBURSED")
     .reduce((sum, l) => sum + l.remainingAmount, 0);
-  const piutangJasaBungaEstimasi = Math.round(piutangPokokPinjaman * 0.08); // Bunga berjalan 8%
+
+  // Estimasi piutang bunga = sisa cicilan bunga yang belum diterima
+  // Hitung berdasarkan jumlah angsuran PENDING × interestAmount per cicilan
+  const piutangJasaBungaEstimasi = installments
+    .filter((i) => i.status === "PENDING" || i.status === "OVERDUE")
+    .reduce((sum, i) => sum + (i.interestAmount ?? 0), 0);
 
   // 3. Persediaan Barang Toko (Kopdes Mart)
   const nilaiPersediaanStokHPP = products.reduce((sum, p) => sum + p.stock * p.costPrice, 0);

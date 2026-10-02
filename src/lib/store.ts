@@ -295,7 +295,10 @@ export const DataStore = {
     const loans = this.getLoans();
     const loan = loans.find((l) => l.id === ins.loanId);
     if (loan) {
-      loan.remainingAmount = Math.max(0, loan.remainingAmount - ins.amount);
+      // Kurangi sisa pokok hanya dengan bagian POKOK cicilan (bukan total cicilan termasuk bunga)
+      // Jika ins.principalAmount tidak ada (data lama), fallback ke ins.amount
+      const principalPaid = ins.principalAmount ?? ins.amount;
+      loan.remainingAmount = Math.max(0, loan.remainingAmount - principalPaid);
       if (loan.remainingAmount <= 0) {
         loan.status = "PAID_OFF";
       }

@@ -101,7 +101,10 @@ export default function TransparansiPublikPage() {
 
   // --- KALKULASI SHU BERSIH BERJALAN (SAMA PERSIS DENGAN NERACA KEUANGAN RESMI) ---
   const piutangPokokPinjaman = totalSisaPinjamanBerjalan;
-  const piutangJasaBungaEstimasi = Math.round(piutangPokokPinjaman * 0.08);
+  // Piutang bunga = total interestAmount dari angsuran PENDING/OVERDUE yang belum dibayar
+  const piutangJasaBungaEstimasi = installments
+    .filter((i: any) => i.status === "PENDING" || i.status === "OVERDUE")
+    .reduce((sum: number, i: any) => sum + (i.interestAmount ?? 0), 0);
   const nilaiPersediaanStokHPP = products.reduce((sum, p) => sum + p.stock * p.costPrice, 0);
   const totalAsetLancar = totalKasBersihOperasional + piutangPokokPinjaman + piutangJasaBungaEstimasi + nilaiPersediaanStokHPP;
   const nilaiBukuAsetTetap = 18500000; // Inventaris & peralatan operasional (22jt - 3.5jt penyusutan)
