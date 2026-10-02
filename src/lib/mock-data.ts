@@ -1,4 +1,48 @@
-import { CooperativeConfig, Member, User, SavingsTransaction, Loan, LoanInstallment, AuditLog } from "@/types";
+import {
+  CooperativeConfig,
+  Member,
+  User,
+  SavingsTransaction,
+  Loan,
+  LoanInstallment,
+  AuditLog,
+  Product,
+  SaleTransaction,
+  PerjalananDinasRate,
+  PerjalananDinas,
+  PengawasanNote,
+} from "@/types";
+
+export const initialPerjalananDinasRates: PerjalananDinasRate[] = [
+  {
+    tingkat: "DALAM_KECAMATAN",
+    label: "Dalam Kecamatan (Bandar Sei Kijang)",
+    uangHarian: 150000,
+    transport: 75000,
+    penginapan: 0,
+  },
+  {
+    tingkat: "DALAM_KABUPATEN",
+    label: "Kabupaten Pelalawan (Pangkalan Kerinci)",
+    uangHarian: 250000,
+    transport: 200000,
+    penginapan: 250000,
+  },
+  {
+    tingkat: "LUAR_KABUPATEN_PROVINSI",
+    label: "Provinsi Riau (Pekanbaru / Luar Kabupaten)",
+    uangHarian: 350000,
+    transport: 400000,
+    penginapan: 400000,
+  },
+  {
+    tingkat: "LUAR_PROVINSI",
+    label: "Luar Provinsi Riau (Jakarta / Nasional)",
+    uangHarian: 500000,
+    transport: 1500000,
+    penginapan: 650000,
+  },
+];
 
 export const initialConfig: CooperativeConfig = {
   coopName: "Koperasi Desa Merah Putih Lubuk Ogung",
@@ -14,6 +58,7 @@ export const initialConfig: CooperativeConfig = {
   currentFiscalYear: 2026,
   shuEstimateTotal: 48500000,
   martMemberDiscountPercent: 2.5,
+  sbmPerjalananDinas: initialPerjalananDinasRates,
 };
 
 export const initialUsers: User[] = [
@@ -27,6 +72,17 @@ export const initialUsers: User[] = [
     phone: "0812-7566-0001",
     isActive: true,
     createdAt: "2026-01-01T08:00:00Z",
+  },
+  {
+    id: "usr-pengawas-1",
+    username: "pengawas",
+    password: "kopdes2026",
+    name: "Drs. H. M. Syukri, M.Si",
+    role: "PENGAWAS",
+    email: "pengawas.syukri@lubukogung.desa.id",
+    phone: "0811-7654-3210",
+    isActive: true,
+    createdAt: "2026-01-01T08:30:00Z",
   },
   {
     id: "usr-manager-1",
@@ -845,4 +901,110 @@ export const initialSales: import("@/types").SaleTransaction[] = [
     notes: "Pembeli umum",
   },
 ];
+
+export const initialPerjalananDinas: PerjalananDinas[] = [
+  {
+    id: "sppd-001",
+    nomorSppd: "001/SPPD/KOPDES-LO/II/2026",
+    namaPegawai: "Surya Pratama, S.E",
+    jabatan: "Manager Koperasi",
+    keperluan: "Koordinasi Pelaporan Kinerja Triwulan Koperasi ke Dinas Koperasi & UKM Kab. Pelalawan",
+    tujuan: "Pangkalan Kerinci (Ibu Kota Kab. Pelalawan)",
+    tingkat: "DALAM_KABUPATEN",
+    tanggalBerangkat: "2026-02-15",
+    tanggalKembali: "2026-02-15",
+    lamaHari: 1,
+    uangHarian: 250000,
+    biayaTransport: 200000,
+    biayaPenginapan: 0,
+    totalBiaya: 450000,
+    status: "DICAIRKAN",
+    tanggalPengajuan: "2026-02-12",
+    approvedBy: "Aidil Fadilah, S.T",
+    approvedDate: "2026-02-13",
+    disbursedBy: "Abil Syahdinu Pradiksa, S.T",
+    disbursedDate: "2026-02-14",
+    notes: "Sudah terlaksana dengan baik, berkas laporan triwulan telah diterima dinas.",
+    hasilLaporan: "Laporan triwulan I diterima lengkap oleh Bidang Koperasi Diskop UKM Pelalawan. Koperasi kita masuk nominasi koperasi desa percontohan.",
+  },
+  {
+    id: "sppd-002",
+    nomorSppd: "002/SPPD/KOPDES-LO/III/2026",
+    namaPegawai: "Bambang Irawan & Abil Syahdinu, S.T",
+    jabatan: "Staf Gudang & Bendahara",
+    keperluan: "Kulakan Sembako Grosir Partai Besar & Negosiasi Distributor Minyakita & Beras Murah",
+    tujuan: "Pekanbaru (Provinsi Riau)",
+    tingkat: "LUAR_KABUPATEN_PROVINSI",
+    tanggalBerangkat: "2026-03-02",
+    tanggalKembali: "2026-03-03",
+    lamaHari: 2,
+    uangHarian: 700000, // 2 hari x 350.000
+    biayaTransport: 400000,
+    biayaPenginapan: 400000,
+    totalBiaya: 1500000,
+    status: "DICAIRKAN",
+    tanggalPengajuan: "2026-02-27",
+    approvedBy: "Aidil Fadilah, S.T",
+    approvedDate: "2026-02-28",
+    disbursedBy: "Abil Syahdinu Pradiksa, S.T",
+    disbursedDate: "2026-03-01",
+    notes: "Pengadaan stok sembako persiapan bulan puasa & diskon anggota.",
+    hasilLaporan: "Berhasil mendapatkan MoU suplai beras Solok dan Minyakita langsung dari distributor Pekanbaru dengan potongan harga kulakan 4%.",
+  },
+  {
+    id: "sppd-003",
+    nomorSppd: "003/SPPD/KOPDES-LO/III/2026",
+    namaPegawai: "Drs. H. M. Syukri, M.Si",
+    jabatan: "Dewan Pengawas",
+    keperluan: "Mengikuti Bimbingan Teknis Tata Kelola Pengawasan Koperasi Desa se-Provinsi Riau",
+    tujuan: "Pekanbaru (Hotel Grand Central)",
+    tingkat: "LUAR_KABUPATEN_PROVINSI",
+    tanggalBerangkat: "2026-03-25",
+    tanggalKembali: "2026-03-26",
+    lamaHari: 2,
+    uangHarian: 700000,
+    biayaTransport: 400000,
+    biayaPenginapan: 400000,
+    totalBiaya: 1500000,
+    status: "DISETUJUI",
+    tanggalPengajuan: "2026-03-18",
+    approvedBy: "Aidil Fadilah, S.T",
+    approvedDate: "2026-03-19",
+    notes: "Surat undangan dari Dinas Koperasi Prov Riau terlampir. Menunggu pencairan di Bendahara.",
+  },
+];
+
+export const initialPengawasanNotes: PengawasanNote[] = [
+  {
+    id: "note-001",
+    tanggal: "2026-02-28",
+    pengawasName: "Drs. H. M. Syukri, M.Si",
+    aspek: "KEUANGAN",
+    judul: "Verifikasi Rekonsiliasi Kas Tunai Loket & Rekening Bank",
+    temuan: "Fisik brankas kasir klop dengan catatan sistem, saldo giro Bank Riau Kepri tercatat sinkron.",
+    rekomendasi: "Pertahankan ketertiban tutup kas harian dan pastikan slip setor bank diarsip rapi.",
+    status: "SELESAI",
+  },
+  {
+    id: "note-002",
+    tanggal: "2026-03-10",
+    pengawasName: "Drs. H. M. Syukri, M.Si",
+    aspek: "PINJAMAN",
+    judul: "Kepatuhan Plafon Pinjaman Di Atas Rp 5 Juta",
+    temuan: "Semua pengajuan pinjaman > Rp 5.000.000 telah melalui persetujuan resmi Master/Kepala Desa.",
+    rekomendasi: "Jaga rasio NPL tetap 0% dengan pengingat WA ramah H-3 sebelum tanggal jatuh tempo.",
+    status: "SELESAI",
+  },
+  {
+    id: "note-003",
+    tanggal: "2026-03-15",
+    pengawasName: "Drs. H. M. Syukri, M.Si",
+    aspek: "OPERASIONAL_MART",
+    judul: "Pemeriksaan Rutin Stok Sembako Kopdes Mart",
+    temuan: "Stok beras dan minyak goreng mencukupi. Terdata 1 item mendekati batas minimum stok (Telur Ayam).",
+    rekomendasi: "Bagian gudang segera lakukan restock sebelum stok habis agar kebutuhan warga tetap terpenuhi.",
+    status: "DITINDAKLANJUTI",
+  },
+];
+
 

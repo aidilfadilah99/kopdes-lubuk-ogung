@@ -11,6 +11,9 @@ import {
   UserRole,
   Product,
   SaleTransaction,
+  PerjalananDinas,
+  PerjalananDinasRate,
+  PengawasanNote,
 } from "@/types";
 import {
   initialAuditLogs,
@@ -22,6 +25,8 @@ import {
   initialUsers,
   initialProducts,
   initialSales,
+  initialPerjalananDinas,
+  initialPengawasanNotes,
 } from "./mock-data";
 
 const STORAGE_KEYS = {
@@ -34,6 +39,8 @@ const STORAGE_KEYS = {
   LOGS: "kopdes_logs_v3",
   PRODUCTS: "kopdes_products_v3",
   SALES: "kopdes_sales_v3",
+  PERJALANAN_DINAS: "kopdes_perjalanan_dinas_v3",
+  PENGAWASAN_NOTES: "kopdes_pengawasan_notes_v3",
 };
 
 function getFromStorage<T>(key: string, defaultValue: T): T {
@@ -415,6 +422,131 @@ export const DataStore = {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("kopdes-data-synced"));
     }
+  },
+
+  // --- PERJALANAN DINAS (SPPD) ---
+  getPerjalananDinas(): PerjalananDinas[] {
+    return getFromStorage(STORAGE_KEYS.PERJALANAN_DINAS, initialPerjalananDinas);
+  },
+  addPerjalananDinas(sppd: PerjalananDinas): void {
+    const list = this.getPerjalananDinas();
+    list.unshift(sppd);
+    setToStorage(STORAGE_KEYS.PERJALANAN_DINAS, list);
+    pushToCloud("perjalanan_dinas", list);
+
+    this.addAuditLog(
+      "PENGAJUAN_SPPD",
+      `Pengajuan SPPD ${sppd.nomorSppd} (${sppd.namaPegawai} - ${sppd.tujuan}) total Rp ${sppd.totalBiaya.toLocaleString("id-ID")}`,
+      { id: "usr-sppd", name: sppd.namaPegawai, role: "MANAGER" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+  approvePerjalananDinas(id: string, approverName: string): boolean {
+    const list = this.getPerjalananDinas();
+    const item = list.find((p) => p.id === id);
+    if (!item) return false;
+    item.status = "DISETUJUI";
+    item.approvedBy = approverName;
+    item.approvedDate = new Date().toISOString().split("T")[0];
+    setToStorage(STORAGE_KEYS.PERJALANAN_DINAS, list);
+    pushToCloud("perjalanan_dinas", list);
+
+    this.addAuditLog(
+      "PERSETUJUAN_SPPD",
+      `SPPD ${item.nomorSppd} disetujui oleh ${approverName} senilai Rp ${item.totalBiaya.toLocaleString("id-ID")}`,
+      { id: "usr-approver", name: approverName, role: "MASTER" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+    return true;
+  },
+  disbursePerjalananDinas(id: string, disburserName: string): boolean {
+    const list = this.getPerjalananDinas();
+    const item = list.find((p) => p.id === id);
+    if (!item) return false;
+    item.status = "DICAIRKAN";
+    item.disbursedBy = disburserName;
+    item.disbursedDate = new Date().toISOString().split("T")[0];
+    setToStorage(STORAGE_KEYS.PERJALANAN_DINAS, list);
+    pushToCloud("perjalanan_dinas", list);
+
+    this.addAuditLog(
+      "PENCAIRAN_SPPD",
+      `Dana SPPD ${item.nomorSppd} (${item.namaPegawai}) dicairkan oleh ${disburserName} senilai Rp ${item.totalBiaya.toLocaleString("id-ID")}`,
+      { id: "usr-disburser", name: disburserName, role: "BENDAHARA" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+    return true;
+  },
+  rejectPerjalananDinas(id: string, notes?: string): boolean {
+    const list = this.getPerjalananDinas();
+    const item = list.find((p) => p.id === id);
+    if (!item) return false;
+    item.status = "DITOLAK";
+    if (notes) item.notes = notes;
+    setToStorage(STORAGE_KEYS.PERJALANAN_DINAS, list);
+    pushToCloud("perjalanan_dinas", list);
+
+    this.addAuditLog(
+      "PENOLAKAN_SPPD",
+      `SPPD ${item.nomorSppd} (${item.namaPegawai}) ditolak: ${notes || "Tidak disetujui"}`,
+      { id: "usr-master", name: "Master/Pengurus", role: "MASTER" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+    return true;
+  },
+  updateSbmPerjalananDinas(rates: PerjalananDinasRate[]): void {
+    const config = this.getConfig();
+    config.sbmPerjalananDinas = rates;
+    this.updateConfig(config);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+
+  // --- CATATAN & TEMUAN PENGAWASAN ---
+  getPengawasanNotes(): PengawasanNote[] {
+    return getFromStorage(STORAGE_KEYS.PENGAWASAN_NOTES, initialPengawasanNotes);
+  },
+  addPengawasanNote(note: PengawasanNote): void {
+    const list = this.getPengawasanNotes();
+    list.unshift(note);
+    setToStorage(STORAGE_KEYS.PENGAWASAN_NOTES, list);
+    pushToCloud("pengawasan_notes", list);
+
+    this.addAuditLog(
+      "TEMUAN_PENGAWAS",
+      `Catatan Pengawasan [${note.aspek}]: ${note.judul} oleh ${note.pengawasName}`,
+      { id: "usr-pengawas", name: note.pengawasName, role: "PENGAWAS" }
+    );
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+  },
+  updatePengawasanNoteStatus(id: string, status: "TERBUKA" | "DITINDAKLANJUTI" | "SELESAI"): boolean {
+    const list = this.getPengawasanNotes();
+    const item = list.find((n) => n.id === id);
+    if (!item) return false;
+    item.status = status;
+    setToStorage(STORAGE_KEYS.PENGAWASAN_NOTES, list);
+    pushToCloud("pengawasan_notes", list);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("kopdes-data-synced"));
+    }
+    return true;
   },
 
   // RESET

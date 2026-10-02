@@ -1,4 +1,4 @@
-export type UserRole = 'MASTER' | 'MANAGER' | 'ADMIN' | 'BENDAHARA' | 'ANGGOTA' | 'KASIR' | 'GUDANG';
+export type UserRole = 'MASTER' | 'PENGAWAS' | 'MANAGER' | 'ADMIN' | 'BENDAHARA' | 'ANGGOTA' | 'KASIR' | 'GUDANG';
 
 export interface User {
   id: string;
@@ -117,6 +117,7 @@ export interface CooperativeConfig {
   currentFiscalYear: number;
   shuEstimateTotal: number;
   martMemberDiscountPercent: number; // e.g. 2.5% potongan harga untuk anggota
+  sbmPerjalananDinas?: PerjalananDinasRate[];
 }
 
 export type ProductCategory = 
@@ -183,4 +184,62 @@ export interface SaleTransaction {
   amountPaid: number;
   changeAmount: number;
   notes?: string;
+}
+
+// --- PERJALANAN DINAS & STANDAR BIAYA (SBM) ---
+export type TingkatPerjalananDinas = 
+  | 'DALAM_KECAMATAN' 
+  | 'DALAM_KABUPATEN' 
+  | 'LUAR_KABUPATEN_PROVINSI' 
+  | 'LUAR_PROVINSI';
+
+export interface PerjalananDinasRate {
+  tingkat: TingkatPerjalananDinas;
+  label: string;
+  uangHarian: number;      // Per hari (uang saku + konsumsi)
+  transport: number;       // Biaya tiket / BBM / travel / tol
+  penginapan: number;      // Per malam jika menginap (> 1 hari)
+}
+
+export type StatusPerjalananDinas = 
+  | 'DIAJUKAN' 
+  | 'DISETUJUI' 
+  | 'DICAIRKAN' 
+  | 'DITOLAK';
+
+export interface PerjalananDinas {
+  id: string;
+  nomorSppd: string;
+  namaPegawai: string;
+  jabatan: string;
+  keperluan: string;
+  tujuan: string;
+  tingkat: TingkatPerjalananDinas;
+  tanggalBerangkat: string;
+  tanggalKembali: string;
+  lamaHari: number;
+  uangHarian: number;
+  biayaTransport: number;
+  biayaPenginapan: number;
+  totalBiaya: number;
+  status: StatusPerjalananDinas;
+  tanggalPengajuan: string;
+  approvedBy?: string;
+  approvedDate?: string;
+  disbursedBy?: string;
+  disbursedDate?: string;
+  notes?: string;
+  hasilLaporan?: string;
+}
+
+// --- CATATAN & TEMUAN PENGAWASAN ---
+export interface PengawasanNote {
+  id: string;
+  tanggal: string;
+  pengawasName: string;
+  aspek: 'KEUANGAN' | 'KEPATUHAN' | 'OPERASIONAL_MART' | 'PINJAMAN' | 'UMUM';
+  judul: string;
+  temuan: string;
+  rekomendasi: string;
+  status: 'TERBUKA' | 'DITINDAKLANJUTI' | 'SELESAI';
 }

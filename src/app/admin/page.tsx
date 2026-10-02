@@ -28,12 +28,14 @@ import {
   Pencil,
   UserX,
   BarChart3,
+  Briefcase,
 } from "lucide-react";
 import { NeracaKeuangan } from "@/components/NeracaKeuangan";
+import { PerjalananDinasModule } from "@/components/PerjalananDinasModule";
 
 function AdminDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"members" | "loans" | "neraca">("members");
+  const [activeTab, setActiveTab] = useState<"members" | "loans" | "sppd" | "neraca">("members");
 
   const [members, setMembers] = useState<Member[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -80,6 +82,8 @@ function AdminDashboardContent() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("tab") === "neraca") {
         setActiveTab("neraca");
+      } else if (params.get("tab") === "sppd" || params.get("tab") === "perjalanan-dinas") {
+        setActiveTab("sppd");
       }
     }
     window.addEventListener("kopdes-data-synced", refreshData);
@@ -426,6 +430,20 @@ function AdminDashboardContent() {
           )}
         </button>
 
+        {["MANAGER", "MASTER", "ADMIN"].includes(currentUser?.role ?? "") && (
+          <button
+            onClick={() => setActiveTab("sppd")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+              activeTab === "sppd"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                : "bg-white text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            Perjalanan Dinas (SPPD)
+          </button>
+        )}
+
         {["MANAGER", "MASTER"].includes(currentUser?.role ?? "") && (
           <button
             onClick={() => setActiveTab("neraca")}
@@ -754,6 +772,14 @@ function AdminDashboardContent() {
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB PERJALANAN DINAS (SPPD) */}
+      {activeTab === "sppd" && currentUser && (
+        <PerjalananDinasModule
+          userRole={currentUser.role}
+          currentUserName={currentUser.name}
+        />
       )}
 
       {/* TAB 3: NERACA KEUANGAN (MANAGER & MASTER) */}

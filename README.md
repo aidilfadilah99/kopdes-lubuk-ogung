@@ -10,14 +10,23 @@ Dirancang khusus dengan standar **Role-Based Access Control (RBAC)** dan dioptim
 
 Aplikasi memiliki pembagian peran yang sangat tegas:
 
-1. **🔴 Master / Pengawas Utama** (`/master`)
-   - Memegang wewenang tertinggi koperasi desa.
+1. **🔴 Master / Pimpinan Tertinggi Sistem** (`/master`)
+   - Memegang wewenang tertinggi konfigurasi dan sistem koperasi desa.
    - Otorisasi pinjaman besar (> Rp 5.000.000).
-   - Manajemen akun pengguna & staf (tambah, edit, nonaktifkan, hapus Manager, Admin, Bendahara).
+   - Mengatur dan menentukan Standar Biaya Masukan (SBM) Perjalanan Dinas (SPPD).
+   - Menyetujui pengajuan perjalanan dinas seluruh stakeholder.
+   - Manajemen akun pengguna & staf (tambah, edit, nonaktifkan, hapus Manager, Pengawas, Admin, Bendahara).
    - Pengaturan parameter kebijakan (Simpanan Pokok, Simpanan Wajib, Suku Bunga, Limit).
    - Rekam jejak audit (*Audit Trail Log*).
 
-2. **🟣 Manager / Manajer Operasional Koperasi**
+2. **🟢 Dewan Pengawas Koperasi** (`/pengawas`)
+   - Menjalankan fungsi pengawasan independen dan pemeriksaan internal (Audit Read-Only & Monitoring).
+   - Memeriksa rasio kesehatan keuangan (Likuiditas, Solvabilitas, Rasio Kredit Macet NPL).
+   - Mengawasi arus Buku Kas Umum (BKU), verifikasi brankas kasir vs saldo bank (Kas Opname).
+   - Memantau kepatuhan pinjaman, inventaris sembako minimarket Kopdes Mart, dan realisasi SPPD perjalanan dinas.
+   - Menyusun catatan resmi temuan & rekomendasi pemeriksaan untuk dilaporkan ke Rapat Anggota Tahunan (RAT).
+
+3. **🟣 Manager / Manajer Operasional Koperasi**
    - **Memiliki seluruh akses operasional koperasi desa kecuali akses Master**:
      - Akses Dashboard Admin & Keanggotaan (`/admin`)
      - Akses Loket Keuangan & Kasir Bendahara (`/bendahara`)

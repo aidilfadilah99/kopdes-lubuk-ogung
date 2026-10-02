@@ -34,13 +34,15 @@ import {
   Coins,
   Store,
   BarChart3,
+  Briefcase,
 } from "lucide-react";
 import { RpBadge } from "@/components/RupiahIcons";
 import { NeracaKeuangan } from "@/components/NeracaKeuangan";
+import { PerjalananDinasModule } from "@/components/PerjalananDinasModule";
 
 function MasterDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"approval" | "users" | "neraca" | "config" | "logs">("approval");
+  const [activeTab, setActiveTab] = useState<"approval" | "users" | "sppd" | "neraca" | "config" | "logs">("approval");
   
   // Data state
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -82,6 +84,8 @@ function MasterDashboardContent() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("tab") === "neraca") {
         setActiveTab("neraca");
+      } else if (params.get("tab") === "sppd" || params.get("tab") === "perjalanan-dinas") {
+        setActiveTab("sppd");
       }
     }
     window.addEventListener("kopdes-data-synced", refreshData);
@@ -249,6 +253,18 @@ function MasterDashboardContent() {
         >
           <Users className="w-4 h-4" />
           Kelola Pengguna & Staf ({users.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("sppd")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "sppd"
+              ? "bg-red-600 text-white shadow-md shadow-red-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Briefcase className="w-4 h-4" />
+          Perjalanan Dinas (SPPD)
         </button>
 
         <button
@@ -543,6 +559,14 @@ function MasterDashboardContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB PERJALANAN DINAS (SPPD) */}
+      {activeTab === "sppd" && (
+        <PerjalananDinasModule
+          userRole="MASTER"
+          currentUserName={currentUser.name}
+        />
       )}
 
       {/* TAB NERACA KEUANGAN & SHU */}

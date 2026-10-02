@@ -33,10 +33,13 @@ export default function LoginPage() {
     if (!isLoading && currentUser) {
       const map: Record<string, string> = {
         MASTER: "/master",
+        PENGAWAS: "/pengawas",
         MANAGER: "/admin",
         ADMIN: "/admin",
         BENDAHARA: "/bendahara",
         ANGGOTA: "/anggota",
+        KASIR: "/toko",
+        GUDANG: "/toko",
       };
       router.replace(map[currentUser.role] ?? "/");
     }

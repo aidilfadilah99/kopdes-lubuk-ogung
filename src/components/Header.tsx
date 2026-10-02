@@ -21,10 +21,13 @@ import {
   UserCog,
   Store,
   BarChart3,
+  Briefcase,
+  ShieldCheck,
 } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
   MASTER: "Master",
+  PENGAWAS: "Pengawas",
   MANAGER: "Manager",
   ADMIN: "Admin",
   BENDAHARA: "Bendahara",
@@ -35,6 +38,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ROLE_COLORS: Record<string, string> = {
   MASTER: "bg-red-100 text-red-800",
+  PENGAWAS: "bg-emerald-100 text-emerald-800",
   MANAGER: "bg-purple-100 text-purple-800",
   ADMIN: "bg-blue-100 text-blue-800",
   BENDAHARA: "bg-green-100 text-green-800",
@@ -65,12 +69,21 @@ export default function Header() {
         ...(currentUser.role === "MASTER"
           ? [
               { href: "/master", label: "Dashboard Master", icon: LayoutDashboard },
+              { href: "/master?tab=sppd", label: "SPPD Dinas", icon: Briefcase },
               { href: "/master?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
+            ]
+          : []),
+        ...(currentUser.role === "PENGAWAS"
+          ? [
+              { href: "/pengawas", label: "Dashboard Pengawas", icon: ShieldCheck },
+              { href: "/pengawas?tab=sppd", label: "Audit SPPD", icon: Briefcase },
+              { href: "/pengawas?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
             ]
           : []),
         ...(currentUser.role === "MANAGER"
           ? [
               { href: "/admin", label: "Admin & Warga", icon: Users },
+              { href: "/admin?tab=sppd", label: "SPPD Dinas", icon: Briefcase },
               { href: "/admin?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
               { href: "/bendahara", label: "Loket Keuangan", icon: Wallet },
               { href: "/anggota", label: "Portal Anggota", icon: User },
@@ -82,6 +95,7 @@ export default function Header() {
         ...(currentUser.role === "BENDAHARA"
           ? [
               { href: "/bendahara", label: "Loket Keuangan", icon: Wallet },
+              { href: "/bendahara?tab=sppd", label: "Pencairan SPPD", icon: Briefcase },
               { href: "/bendahara?tab=neraca", label: "Neraca Keuangan", icon: BarChart3 },
             ]
           : []),
@@ -111,6 +125,8 @@ export default function Header() {
               currentUser
                 ? currentUser.role === "MANAGER"
                   ? "/admin"
+                  : currentUser.role === "PENGAWAS"
+                  ? "/pengawas"
                   : currentUser.role === "KASIR" || currentUser.role === "GUDANG"
                   ? "/toko"
                   : `/${currentUser.role.toLowerCase()}`

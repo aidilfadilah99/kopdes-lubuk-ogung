@@ -6,6 +6,7 @@ import { DataStore } from "@/lib/store";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ConfirmModal, ConfirmDetailItem } from "@/components/ConfirmModal";
 import { NeracaKeuangan } from "@/components/NeracaKeuangan";
+import { PerjalananDinasModule } from "@/components/PerjalananDinasModule";
 import {
   Loan,
   LoanInstallment,
@@ -13,6 +14,7 @@ import {
   SavingsTransaction,
   SavingsType,
   SaleTransaction,
+  PerjalananDinas,
 } from "@/types";
 import {
   formatDateIndo,
@@ -47,12 +49,13 @@ import {
   ShoppingBag,
   Store,
   Users,
+  Briefcase,
 } from "lucide-react";
 import { RpReceipt, RpBanknote } from "@/components/RupiahIcons";
 
 function BendaharaDashboardContent() {
   const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "bku" | "neraca">("setoran");
+  const [activeTab, setActiveTab] = useState<"setoran" | "pencairan" | "angsuran" | "sppd" | "bku" | "neraca">("setoran");
 
   // State data
   const [members, setMembers] = useState<Member[]>([]);
@@ -60,6 +63,7 @@ function BendaharaDashboardContent() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [installments, setInstallments] = useState<LoanInstallment[]>([]);
   const [sales, setSales] = useState<SaleTransaction[]>([]);
+  const [sppdList, setSppdList] = useState<PerjalananDinas[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
 
   // Mode transaksi Loket Simpanan: SETORAN (Kas Masuk) vs PENARIKAN (Kas Keluar)
@@ -104,6 +108,7 @@ function BendaharaDashboardContent() {
     setLoans(DataStore.getLoans());
     setInstallments(DataStore.getInstallments());
     setSales(DataStore.getSales());
+    setSppdList(DataStore.getPerjalananDinas());
   };
 
   useEffect(() => {
@@ -114,6 +119,8 @@ function BendaharaDashboardContent() {
         setActiveTab("neraca");
       } else if (params.get("tab") === "bku") {
         setActiveTab("bku");
+      } else if (params.get("tab") === "sppd" || params.get("tab") === "perjalanan-dinas") {
+        setActiveTab("sppd");
       }
     }
     window.addEventListener("kopdes-data-synced", refreshData);
@@ -463,9 +470,25 @@ function BendaharaDashboardContent() {
       });
     });
 
+    // 5. Pencairan Biaya Perjalanan Dinas (Kas Keluar)
+    sppdList.forEach((sppd) => {
+      if (sppd.status === "DICAIRKAN" && sppd.disbursedDate) {
+        list.push({
+          id: `sppd-${sppd.id}`,
+          date: sppd.disbursedDate,
+          type: "OUT",
+          category: "Perjalanan Dinas",
+          description: `Pencairan SPPD ${sppd.nomorSppd}: ${sppd.namaPegawai} (${sppd.tujuan})`,
+          member: sppd.namaPegawai,
+          amount: sppd.totalBiaya,
+          officer: sppd.disbursedBy || "Bendahara",
+        });
+      }
+    });
+
     // Urutkan dari terbaru
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [savings, installments, loans, sales]);
+  }, [savings, installments, loans, sales, sppdList]);
 
   // Rekonsiliasi Kas Hari Ini
   const todayIn = bkuTransactions
@@ -496,6 +519,10 @@ function BendaharaDashboardContent() {
 
   const todayOutPenarikan = bkuTransactions
     .filter((t) => t.date.startsWith(todayStr) && t.type === "OUT" && t.category === "Penarikan Sukarela")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const todayOutSppd = bkuTransactions
+    .filter((t) => t.date.startsWith(todayStr) && t.type === "OUT" && t.category === "Perjalanan Dinas")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const todayNet = todayIn - todayOut;
@@ -605,6 +632,23 @@ function BendaharaDashboardContent() {
         >
           <BookOpen className="w-4 h-4" />
           Buku Kas Umum (BKU)
+        </button>
+
+        <button
+          onClick={() => setActiveTab("sppd")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            activeTab === "sppd"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/20"
+              : "bg-white text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Briefcase className="w-4 h-4" />
+          Pencairan SPPD
+          {sppdList.filter((s) => s.status === "DISETUJUI").length > 0 && (
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 text-xs font-bold">
+              {sppdList.filter((s) => s.status === "DISETUJUI").length} Siap Cair
+            </span>
+          )}
         </button>
 
         <button
@@ -1129,12 +1173,12 @@ function BendaharaDashboardContent() {
                     </span>
                     <span className="font-mono font-bold text-rose-800">-{formatRupiah(todayOutPenarikan)}</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <CreditCard className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                      Pengeluaran Lainnya:
+                  <div className="flex items-center justify-between">
+                    <span className="text-rose-900 flex items-center gap-1.5 font-medium">
+                      <Briefcase className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+                      Perjalanan Dinas (SPPD):
                     </span>
-                    <span className="font-mono">Rp 0</span>
+                    <span className="font-mono font-bold text-rose-800">-{formatRupiah(todayOutSppd)}</span>
                   </div>
                 </div>
               </div>
@@ -1263,6 +1307,14 @@ function BendaharaDashboardContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB PENCAIRAN SPPD (BENDAHARA) */}
+      {activeTab === "sppd" && (
+        <PerjalananDinasModule
+          userRole="BENDAHARA"
+          currentUserName={currentUser.name}
+        />
       )}
 
       {/* TAB 5: NERACA KEUANGAN (BENDAHARA) */}
